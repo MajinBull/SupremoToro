@@ -30,16 +30,62 @@ export async function fetchTickers() {
   return data;
 }
 
+function parseBybitKlineBody(body, symbol, interval) {
+  if (body.retCode !== 0) {
+    throw new Error(body.retMsg || `Bybit retCode ${body.retCode}`);
+  }
+  const result = body.result;
+  const raw = result.list || [];
+  const sorted = [...raw].sort((a, b) => Number(a[0]) - Number(b[0]));
+  const candles = sorted.map((row) => ({
+    time: Math.floor(Number(row[0]) / 1000),
+    open: Number(row[1]),
+    high: Number(row[2]),
+    low: Number(row[3]),
+    close: Number(row[4]),
+  }));
+  return {
+    symbol: String(result.symbol || symbol).toUpperCase(),
+    interval: String(result.interval || interval),
+    candles,
+  };
+}
+
+/** Fallback: proxy CORS (IP del proxy; può fallire se anche lì Bybit blocca). */
+async function fetchKlinesViaAllOrigins(symbol, interval) {
+  const limit = 500;
+  const q = new URLSearchParams({
+    category: "linear",
+    symbol: symbol.toUpperCase(),
+    interval: String(interval),
+    limit: String(limit),
+  });
+  const target = `https://api.bybit.com/v5/market/kline?${q}`;
+  const proxied = `https://api.allorigins.win/raw?url=${encodeURIComponent(target)}`;
+  const res = await fetch(proxied, { cache: "no-store" });
+  if (!res.ok) throw new Error(`proxy klines ${res.status}`);
+  const body = await res.json();
+  return parseBybitKlineBody(body, symbol, interval);
+}
+
 export async function fetchKlines(symbol, interval) {
   const q = new URLSearchParams({ symbol, interval, limit: "500" });
-  const res = await fetch(apiUrl(`/api/klines?${q}`), {
-    headers: JSON_HEADERS,
-    cache: "no-store",
-  });
-  const data = await res.json();
-  if (!res.ok) {
-    const msg = data.error || `klines ${res.status}`;
-    throw new Error(msg);
+  try {
+    const res = await fetch(apiUrl(`/api/klines?${q}`), {
+      headers: JSON_HEADERS,
+      cache: "no-store",
+    });
+    const data = await res.json();
+    if (!res.ok) {
+      const msg = data.error || `klines ${res.status}`;
+      throw new Error(msg);
+    }
+    return data;
+  } catch (e) {
+    try {
+      return await fetchKlinesViaAllOrigins(symbol, interval);
+    } catch {
+      throw e;
+    }
   }
-  return data;
 }
