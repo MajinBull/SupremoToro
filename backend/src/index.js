@@ -12,7 +12,9 @@ import { fetchKlines } from "./kline.js";
 
 const app = express();
 
-const corsOrigins = process.env.CORS_ORIGINS?.split(",")
+/** Sempre un array: se CORS_ORIGINS manca, lista vuota → cors usa origin: true */
+const corsOrigins = (process.env.CORS_ORIGINS ?? "")
+  .split(",")
   .map((s) => s.trim())
   .filter(Boolean);
 app.use(
