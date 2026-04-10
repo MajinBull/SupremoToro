@@ -1,18 +1,4 @@
-import { BYBIT_BASE } from "./config.js";
-
-async function bybitGet(path, query = {}) {
-  const params = new URLSearchParams(query);
-  const url = `${BYBIT_BASE}${path}?${params}`;
-  const res = await fetch(url);
-  if (!res.ok) {
-    throw new Error(`Bybit HTTP ${res.status} (kline)`);
-  }
-  const body = await res.json();
-  if (body.retCode !== 0) {
-    throw new Error(body.retMsg || `Bybit retCode ${body.retCode}`);
-  }
-  return body.result;
-}
+import { bybitGet } from "./bybit.js";
 
 /**
  * Ritorna array { time, open, high, low, close } per Lightweight Charts.

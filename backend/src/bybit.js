@@ -1,12 +1,19 @@
 import { BYBIT_BASE } from "./config.js";
 
+/** Bybit risponde spesso 403 da IP datacenter se mancano header "da browser". */
+const BYBIT_FETCH_HEADERS = {
+  Accept: "application/json",
+  "User-Agent":
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+};
+
 /**
  * GET generico verso Bybit V5; in errore di rete/HTTP lancia Error con messaggio leggibile.
  */
-async function bybitGet(path, query = {}) {
+export async function bybitGet(path, query = {}) {
   const params = new URLSearchParams(query);
   const url = `${BYBIT_BASE}${path}?${params}`;
-  const res = await fetch(url);
+  const res = await fetch(url, { headers: BYBIT_FETCH_HEADERS });
   if (!res.ok) {
     throw new Error(`Bybit HTTP ${res.status} per ${path}`);
   }
