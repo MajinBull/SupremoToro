@@ -305,6 +305,8 @@ export default function MultiChartsPage() {
    */
   const [rotateCycleSymbols, setRotateCycleSymbols] = useState([]);
 
+  /* Reset ciclo rotazione solo se cambiano griglia, ordinamento, durata rotazione, filtro volume
+   * o lunghezza elenco — non su ogni toggle preferiti se l’elenco filtrato resta uguale. */
   useEffect(() => {
     setPageIndex(0);
     if (rotateSec <= 0) {
@@ -316,7 +318,7 @@ export default function MultiChartsPage() {
     } else {
       setRotateCycleSymbols([]);
     }
-  }, [sortMode, gridCount, sortedSymbols.length, rotateSec, favorites, minVol24hUSDT]);
+  }, [sortMode, gridCount, sortedSymbols.length, rotateSec, minVol24hUSDT]);
 
   const pageCount = useMemo(() => {
     const n =
