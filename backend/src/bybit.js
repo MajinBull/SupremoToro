@@ -1,21 +1,43 @@
 import { BYBIT_BASE } from "./config.js";
 
-/** Bybit risponde spesso 403 da IP datacenter se mancano header "da browser". */
+/**
+ * Header minimali: un User-Agent "browser" finto può far rispondere 400 al WAF (TLS ≠ browser).
+ * Il cursor Bybit è già percent-encoded: URLSearchParams lo ricodificherebbe → 400 sulle pagine successive.
+ */
 const BYBIT_FETCH_HEADERS = {
   Accept: "application/json",
-  "User-Agent":
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
 };
+
+function buildBybitUrl(path, query) {
+  const { cursor, ...rest } = query;
+  const params = new URLSearchParams();
+  for (const [k, v] of Object.entries(rest)) {
+    if (v === undefined || v === null || v === "") continue;
+    params.set(k, String(v));
+  }
+  const qs = params.toString();
+  let url = `${BYBIT_BASE}${path}${qs ? `?${qs}` : ""}`;
+  if (cursor) {
+    url += `${qs ? "&" : "?"}cursor=${cursor}`;
+  }
+  return url;
+}
 
 /**
  * GET generico verso Bybit V5; in errore di rete/HTTP lancia Error con messaggio leggibile.
  */
 export async function bybitGet(path, query = {}) {
-  const params = new URLSearchParams(query);
-  const url = `${BYBIT_BASE}${path}?${params}`;
+  const url = buildBybitUrl(path, query);
   const res = await fetch(url, { headers: BYBIT_FETCH_HEADERS });
   if (!res.ok) {
-    throw new Error(`Bybit HTTP ${res.status} per ${path}`);
+    let hint = "";
+    try {
+      const t = await res.text();
+      if (t && t.length < 400) hint = `: ${t.slice(0, 200)}`;
+    } catch {
+      /* ignore */
+    }
+    throw new Error(`Bybit HTTP ${res.status} per ${path}${hint}`);
   }
   const body = await res.json();
   if (body.retCode !== 0) {
@@ -32,9 +54,9 @@ export async function fetchAllLinearPerpetualSymbols() {
   let cursor = undefined;
 
   do {
+    // Nessuno status: per linear la doc Bybit dice che di default sono solo Trading.
     const result = await bybitGet("/v5/market/instruments-info", {
       category: "linear",
-      status: "Trading",
       limit: "500",
       ...(cursor ? { cursor } : {}),
     });
