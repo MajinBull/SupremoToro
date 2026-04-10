@@ -1,0 +1,17 @@
+# Blueprint Render: New → Blueprint → incolla questo file da repo root, oppure
+# crea un Web Service manualmente con Root Directory = backend.
+
+services:
+  - type: web
+    name: bullweb-backend
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      # Dopo il deploy del frontend su Vercel, aggiungi l'URL qui (virgola se più origini):
+      # CORS_ORIGINS=https://tuo-progetto.vercel.app
