@@ -342,8 +342,10 @@ export default function MultiChartsPage() {
    */
   const [rotateCycleSymbols, setRotateCycleSymbols] = useState([]);
 
+  const lastPinBtcFirstRef = useRef(pinBtcFirst);
+
   /* Reset ciclo rotazione solo se cambiano griglia, ordinamento, durata rotazione, filtro volume
-   * o lunghezza elenco — non su ogni toggle preferiti se l’elenco filtrato resta uguale. */
+   * o lunghezza elenco — non su preferiti né BTC indice (gestiti a parte). */
   useEffect(() => {
     setPageIndex(0);
     if (rotateSec <= 0) {
@@ -355,13 +357,38 @@ export default function MultiChartsPage() {
     } else {
       setRotateCycleSymbols([]);
     }
+  }, [sortMode, gridCount, sortedSymbols.length, rotateSec, minVol24hUSDT]);
+
+  /* BTC indice on/off: aggiorna snapshot ordinamento senza tornare al gruppo 1. */
+  useEffect(() => {
+    if (rotateSec <= 0) {
+      lastPinBtcFirstRef.current = pinBtcFirst;
+      return;
+    }
+    if (lastPinBtcFirstRef.current === pinBtcFirst) return;
+    lastPinBtcFirstRef.current = pinBtcFirst;
+
+    const live = sortedSymbols;
+    if (live.length === 0) return;
+    setRotateCycleSymbols(live.slice());
+
+    const pinActive = pinBtcFirst && hasAnchorBtc;
+    const pc = pinActive
+      ? Math.max(
+          1,
+          Math.ceil(
+            live.filter((s) => s !== ANCHOR_BTC_SYMBOL).length /
+              Math.max(1, gridCount - 1),
+          ),
+        )
+      : Math.max(1, Math.ceil(live.length / gridCount));
+    setPageIndex((i) => Math.min(i, pc - 1));
   }, [
-    sortMode,
-    gridCount,
-    sortedSymbols.length,
-    rotateSec,
-    minVol24hUSDT,
     pinBtcFirst,
+    rotateSec,
+    sortedSymbols,
+    gridCount,
+    hasAnchorBtc,
   ]);
 
   const pageCount = useMemo(() => {
