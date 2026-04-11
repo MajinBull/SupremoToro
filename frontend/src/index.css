@@ -711,16 +711,16 @@ a {
   line-height: 1.2;
 }
 
-.charts-toolbar-timeframe-row {
-  display: flex;
-  flex-wrap: wrap;
+/* Timeframe + BTC indice sulla stessa riga (come prima della topbar) */
+.toolbar--charts .tf-row-inline--timeframe-btc {
+  flex-wrap: nowrap;
   align-items: center;
-  gap: 0.45rem 0.65rem;
 }
 
 .toolbar--charts .tf-btn--btc-index {
   flex-shrink: 0;
   white-space: nowrap;
+  margin-left: 0.2rem;
 }
 
 .toolbar--charts .tf-row-inline--dense {

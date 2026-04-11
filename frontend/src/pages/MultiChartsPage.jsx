@@ -492,19 +492,17 @@ export default function MultiChartsPage() {
             </div>
             <div className="charts-toolbar-cluster charts-toolbar-cluster--stretch">
               <span className="charts-toolbar-cluster-label">Timeframe</span>
-              <div className="charts-toolbar-timeframe-row">
-                <div className="chart-toolbar tf-row-inline tf-row-inline--dense">
-                  {TIMEFRAMES.map((tf) => (
-                    <button
-                      key={tf.api}
-                      type="button"
-                      className={`tf-btn ${chartInterval === tf.api ? "active" : ""}`}
-                      onClick={() => setChartInterval(tf.api)}
-                    >
-                      {tf.label}
-                    </button>
-                  ))}
-                </div>
+              <div className="chart-toolbar tf-row-inline tf-row-inline--dense tf-row-inline--timeframe-btc">
+                {TIMEFRAMES.map((tf) => (
+                  <button
+                    key={tf.api}
+                    type="button"
+                    className={`tf-btn ${chartInterval === tf.api ? "active" : ""}`}
+                    onClick={() => setChartInterval(tf.api)}
+                  >
+                    {tf.label}
+                  </button>
+                ))}
                 <button
                   type="button"
                   className={`tf-btn tf-btn--btc-index ${pinBtcFirst ? "active" : ""}`}
