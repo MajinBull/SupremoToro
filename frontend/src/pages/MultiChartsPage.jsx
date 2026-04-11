@@ -329,6 +329,12 @@ export default function MultiChartsPage() {
   const sortedSymbolsRef = useRef(sortedSymbols);
   sortedSymbolsRef.current = sortedSymbols;
 
+  const hasAnchorBtc = useMemo(
+    () => rowsForCharts.some((r) => r.symbol === ANCHOR_BTC_SYMBOL),
+    [rowsForCharts],
+  );
+  const pinBtcActive = pinBtcFirst && hasAnchorBtc;
+
   /**
    * Con rotazione attiva: elenco “congelato” per tutto un giro completo di pagine, così
    * ogni asset compare 1 sola volta anche se volume/% cambiano tra un passaggio e l’altro.
@@ -359,17 +365,27 @@ export default function MultiChartsPage() {
   ]);
 
   const pageCount = useMemo(() => {
-    const n =
-      rotateSec > 0 && rotateCycleSymbols.length > 0
-        ? rotateCycleSymbols.length
-        : sortedSymbols.length;
+    const frozen = rotateSec > 0 && rotateCycleSymbols.length > 0;
+    const list = frozen ? rotateCycleSymbols : sortedSymbols;
+    const n = list.length;
     if (n === 0) return 1;
+    if (rotateSec <= 0) {
+      return Math.max(1, Math.ceil(n / gridCount));
+    }
+    if (pinBtcActive) {
+      const restLen = list.filter((s) => s !== ANCHOR_BTC_SYMBOL).length;
+      const sub = Math.max(1, gridCount - 1);
+      return Math.max(1, Math.ceil(restLen / sub));
+    }
     return Math.max(1, Math.ceil(n / gridCount));
   }, [
+    sortedSymbols,
+    rotateCycleSymbols,
     sortedSymbols.length,
     rotateCycleSymbols.length,
     gridCount,
     rotateSec,
+    pinBtcActive,
   ]);
 
   const rotationIntervalActive = rotateSec > 0 && pageCount > 1;
@@ -451,7 +467,19 @@ export default function MultiChartsPage() {
           ? rotateCycleSymbols
           : sortedSymbolsRef.current;
     if (list.length === 0) return [];
-    const start = rotateSec <= 0 ? 0 : pageIndex * gridCount;
+
+    if (rotateSec > 0 && pinBtcActive) {
+      const restList = list.filter((s) => s !== ANCHOR_BTC_SYMBOL);
+      const subCount = Math.max(1, gridCount - 1);
+      const start = pageIndex * subCount;
+      const others = restList.slice(start, start + subCount);
+      return [ANCHOR_BTC_SYMBOL, ...others];
+    }
+
+    if (rotateSec <= 0) {
+      return list.slice(0, gridCount);
+    }
+    const start = pageIndex * gridCount;
     return list.slice(start, start + gridCount);
   }, [
     pageIndex,
@@ -460,6 +488,7 @@ export default function MultiChartsPage() {
     sortMode,
     sortedSymbols.length,
     rotateCycleSymbols,
+    pinBtcActive,
   ]);
 
   useEffect(() => {
@@ -492,7 +521,7 @@ export default function MultiChartsPage() {
             </div>
             <div className="charts-toolbar-cluster charts-toolbar-cluster--stretch">
               <span className="charts-toolbar-cluster-label">Timeframe</span>
-              <div className="chart-toolbar tf-row-inline tf-row-inline--dense tf-row-inline--timeframe-btc">
+              <div className="chart-toolbar tf-row-inline tf-row-inline--dense">
                 {TIMEFRAMES.map((tf) => (
                   <button
                     key={tf.api}
@@ -503,15 +532,6 @@ export default function MultiChartsPage() {
                     {tf.label}
                   </button>
                 ))}
-                <button
-                  type="button"
-                  className={`tf-btn tf-btn--btc-index ${pinBtcFirst ? "active" : ""}`}
-                  onClick={() => setPinBtcFirst((v) => !v)}
-                  aria-pressed={pinBtcFirst}
-                  title="Con attivo, BTCUSDT resta sempre il primo simbolo nell’elenco (anche in rotazione)"
-                >
-                  BTC indice
-                </button>
               </div>
             </div>
             <div className="filter-group">
@@ -648,12 +668,30 @@ export default function MultiChartsPage() {
                 </button>
               </div>
             </div>
-            <span
-              className="count-pill charts-toolbar-summary"
-              title="Simboli nell’elenco dopo filtro volume 24h min, ordinamento e altri filtri attivi"
-            >
-              {sortedSymbols.length} simboli · {gridCount} in griglia
-            </span>
+            <div className="charts-toolbar-cluster charts-toolbar-cluster--summary-btc">
+              <span
+                className="charts-toolbar-cluster-label charts-toolbar-cluster-label--stats"
+                title="Simboli nell’elenco dopo filtro volume 24h min, ordinamento e altri filtri attivi"
+              >
+                {sortedSymbols.length} simboli · {gridCount} in griglia
+              </span>
+              <div className="chart-toolbar chart-toolbar--summary-actions">
+                <button
+                  type="button"
+                  className={`tf-btn tf-btn--btc-index ${pinBtcFirst ? "active" : ""}`}
+                  onClick={() => setPinBtcFirst((v) => !v)}
+                  aria-pressed={pinBtcFirst}
+                  disabled={!hasAnchorBtc}
+                  title={
+                    hasAnchorBtc
+                      ? "Attivo: BTCUSDT resta nella prima cella; con rotazione gli altri simboli scorrono intorno."
+                      : "Ticker BTC non ancora disponibile"
+                  }
+                >
+                  BTC indice
+                </button>
+              </div>
+            </div>
           </div>
 
           {rotateSec > 0 && pageCount > 1 && (

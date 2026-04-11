@@ -711,16 +711,33 @@ a {
   line-height: 1.2;
 }
 
-/* Timeframe + BTC indice sulla stessa riga (come prima della topbar) */
-.toolbar--charts .tf-row-inline--timeframe-btc {
-  flex-wrap: nowrap;
-  align-items: center;
+.toolbar--charts .charts-toolbar-cluster--summary-btc {
+  margin-left: auto;
+  align-items: flex-end;
+  text-align: right;
+}
+
+.toolbar--charts .charts-toolbar-cluster-label--stats {
+  text-transform: none;
+  letter-spacing: 0.04em;
+  max-width: 14rem;
+  line-height: 1.25;
+}
+
+.toolbar--charts .chart-toolbar--summary-actions {
+  padding: 0;
+  border: none;
+  justify-content: flex-end;
 }
 
 .toolbar--charts .tf-btn--btc-index {
   flex-shrink: 0;
   white-space: nowrap;
-  margin-left: 0.2rem;
+}
+
+.toolbar--charts .tf-btn--btc-index:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
 }
 
 .toolbar--charts .tf-row-inline--dense {
@@ -738,12 +755,6 @@ a {
 
 .toolbar--charts #charts-min-vol-24h {
   min-width: 9.5rem;
-}
-
-.toolbar--charts .charts-toolbar-summary {
-  margin-left: auto;
-  align-self: center;
-  text-align: right;
 }
 
 .charts-rotate-status {
