@@ -52,6 +52,10 @@ const STORAGE_EMA223 = "bullweb:multiChartEma223";
 const STORAGE_EMA60 = "bullweb:multiChartEma60";
 const STORAGE_EMA10 = "bullweb:multiChartEma10";
 const STORAGE_MIN_VOL_24H = "bullweb:multiChartMinVol24h";
+const STORAGE_PIN_BTC_FIRST = "bullweb:multiChartPinBtcFirst";
+
+/** Perpetual linear USDT su Bybit (riferimento indice). */
+const ANCHOR_BTC_SYMBOL = "BTCUSDT";
 
 /**
  * Soglia minima volume 24h (USDT, come da ticker Bybit). 0 = disattivato.
@@ -147,6 +151,14 @@ function loadMinVol24h() {
   }
 }
 
+function loadPinBtcFirst() {
+  try {
+    return localStorage.getItem(STORAGE_PIN_BTC_FIRST) === "1";
+  } catch {
+    return false;
+  }
+}
+
 function loadEmaOn(storageKey) {
   try {
     const raw = localStorage.getItem(storageKey);
@@ -194,6 +206,7 @@ export default function MultiChartsPage() {
   const [ema60On, setEma60On] = useState(() => loadEmaOn(STORAGE_EMA60));
   const [ema10On, setEma10On] = useState(() => loadEmaOn(STORAGE_EMA10));
   const [minVol24hUSDT, setMinVol24hUSDT] = useState(loadMinVol24h);
+  const [pinBtcFirst, setPinBtcFirst] = useState(loadPinBtcFirst);
   const [alertsPanelOpen, setAlertsPanelOpen] = useState(false);
   const { alerts: priceAlerts } = usePriceAlerts();
 
@@ -269,6 +282,14 @@ export default function MultiChartsPage() {
     }
   }, [minVol24hUSDT]);
 
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_PIN_BTC_FIRST, pinBtcFirst ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  }, [pinBtcFirst]);
+
   const sortedSymbols = useMemo(() => {
     let usable = rowsForCharts.filter((r) => !r.missing && r.symbol);
     if (minVol24hUSDT > 0) {
@@ -292,8 +313,18 @@ export default function MultiChartsPage() {
       );
     }
 
-    return sorted.map((r) => r.symbol);
-  }, [rowsForCharts, sortMode, favorites, minVol24hUSDT]);
+    let ordered = sorted.map((r) => r.symbol);
+
+    if (pinBtcFirst) {
+      const hasBtc = rowsForCharts.some((r) => r.symbol === ANCHOR_BTC_SYMBOL);
+      if (hasBtc) {
+        const rest = ordered.filter((s) => s !== ANCHOR_BTC_SYMBOL);
+        ordered = [ANCHOR_BTC_SYMBOL, ...rest];
+      }
+    }
+
+    return ordered;
+  }, [rowsForCharts, sortMode, favorites, minVol24hUSDT, pinBtcFirst]);
 
   const sortedSymbolsRef = useRef(sortedSymbols);
   sortedSymbolsRef.current = sortedSymbols;
@@ -318,7 +349,14 @@ export default function MultiChartsPage() {
     } else {
       setRotateCycleSymbols([]);
     }
-  }, [sortMode, gridCount, sortedSymbols.length, rotateSec, minVol24hUSDT]);
+  }, [
+    sortMode,
+    gridCount,
+    sortedSymbols.length,
+    rotateSec,
+    minVol24hUSDT,
+    pinBtcFirst,
+  ]);
 
   const pageCount = useMemo(() => {
     const n =
@@ -454,17 +492,28 @@ export default function MultiChartsPage() {
             </div>
             <div className="charts-toolbar-cluster charts-toolbar-cluster--stretch">
               <span className="charts-toolbar-cluster-label">Timeframe</span>
-              <div className="chart-toolbar tf-row-inline tf-row-inline--dense">
-                {TIMEFRAMES.map((tf) => (
-                  <button
-                    key={tf.api}
-                    type="button"
-                    className={`tf-btn ${chartInterval === tf.api ? "active" : ""}`}
-                    onClick={() => setChartInterval(tf.api)}
-                  >
-                    {tf.label}
-                  </button>
-                ))}
+              <div className="charts-toolbar-timeframe-row">
+                <div className="chart-toolbar tf-row-inline tf-row-inline--dense">
+                  {TIMEFRAMES.map((tf) => (
+                    <button
+                      key={tf.api}
+                      type="button"
+                      className={`tf-btn ${chartInterval === tf.api ? "active" : ""}`}
+                      onClick={() => setChartInterval(tf.api)}
+                    >
+                      {tf.label}
+                    </button>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  className={`tf-btn tf-btn--btc-index ${pinBtcFirst ? "active" : ""}`}
+                  onClick={() => setPinBtcFirst((v) => !v)}
+                  aria-pressed={pinBtcFirst}
+                  title="Con attivo, BTCUSDT resta sempre il primo simbolo nell’elenco (anche in rotazione)"
+                >
+                  BTC indice
+                </button>
               </div>
             </div>
             <div className="filter-group">
