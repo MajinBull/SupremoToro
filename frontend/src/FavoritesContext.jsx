@@ -7,7 +7,7 @@ import {
   useState,
 } from "react";
 
-const STORAGE_KEY = "bullweb:favoriteSymbols";
+const STORAGE_KEY = "quota:favoriteSymbols";
 
 function loadInitial() {
   try {

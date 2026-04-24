@@ -43,16 +43,16 @@ const ROTATE_OPTIONS = [
   { value: 300, label: "5 min" },
 ];
 
-const STORAGE_GRID = "bullweb:multiChartGridCount";
-const STORAGE_SORT = "bullweb:multiChartSort";
-const STORAGE_DATA_POLL = "bullweb:chartsDataPollSec";
-const STORAGE_ROTATE = "bullweb:chartsRotateSec";
-const STORAGE_INTERVAL = "bullweb:multiChartInterval";
-const STORAGE_EMA223 = "bullweb:multiChartEma223";
-const STORAGE_EMA60 = "bullweb:multiChartEma60";
-const STORAGE_EMA10 = "bullweb:multiChartEma10";
-const STORAGE_MIN_VOL_24H = "bullweb:multiChartMinVol24h";
-const STORAGE_PIN_BTC_FIRST = "bullweb:multiChartPinBtcFirst";
+const STORAGE_GRID = "quota:multiChartGridCount";
+const STORAGE_SORT = "quota:multiChartSort";
+const STORAGE_DATA_POLL = "quota:chartsDataPollSec";
+const STORAGE_ROTATE = "quota:chartsRotateSec";
+const STORAGE_INTERVAL = "quota:multiChartInterval";
+const STORAGE_EMA223 = "quota:multiChartEma223";
+const STORAGE_EMA60 = "quota:multiChartEma60";
+const STORAGE_EMA10 = "quota:multiChartEma10";
+const STORAGE_MIN_VOL_24H = "quota:multiChartMinVol24h";
+const STORAGE_PIN_BTC_FIRST = "quota:multiChartPinBtcFirst";
 
 /** Perpetual linear USDT su Bybit (riferimento indice). */
 const ANCHOR_BTC_SYMBOL = "BTCUSDT";
@@ -90,7 +90,7 @@ function loadGridCount() {
 function loadSortMode() {
   try {
     const legacyFavOnly =
-      localStorage.getItem("bullweb:multiChartFavoritesOnly") === "1";
+      localStorage.getItem("quota:multiChartFavoritesOnly") === "1";
     const raw = localStorage.getItem(STORAGE_SORT);
     const valid =
       raw === "favorites" ||

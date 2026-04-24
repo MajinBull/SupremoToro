@@ -1,11 +1,11 @@
-# Bullweb — Dashboard perpetual Bybit
+# Quota — Dashboard perpetual Bybit
 
 Web app minimale per monitorare i **contratti perpetual linear** disponibili su Bybit: tabella con prezzo, volume 24h, funding, open interest (valore in USD), grafico candlestick con timeframe selezionabili e aggiornamento periodico.
 
 ## Struttura
 
 ```
-Bullweb/
+Quota/   (cartella locale può avere altro nome)
 ├── README.md
 ├── backend/          # Node.js + Express (proxy verso API pubbliche Bybit v5)
 └── frontend/         # React + Vite + Lightweight Charts

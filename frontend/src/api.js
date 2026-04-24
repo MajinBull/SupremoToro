@@ -1,7 +1,7 @@
 /**
  * Chiamate al backend.
  * - In dev: path relativi `/api` → proxy Vite → :3001.
- * - In produzione: imposta `VITE_API_BASE` (es. https://bullweb-api.onrender.com).
+ * - In produzione: imposta `VITE_API_BASE` (es. https://quota-api.onrender.com).
  */
 
 const JSON_HEADERS = { Accept: "application/json" };

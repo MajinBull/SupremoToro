@@ -11,7 +11,7 @@ import { useTickers } from "./TickerContext.jsx";
 import { playAlertSound } from "./priceAlertSound.js";
 import { normalizeAlertSymbol, priceSegmentHitsLevel } from "./priceAlertsLogic.js";
 
-const STORAGE_KEY = "bullweb:priceAlerts:v1";
+const STORAGE_KEY = "quota:priceAlerts:v1";
 
 /**
  * @typedef {{ id: string, symbol: string, price: number, createdAt: string, triggeredAt: string | null }} PriceAlert

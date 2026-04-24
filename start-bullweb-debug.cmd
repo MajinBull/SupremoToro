@@ -1,9 +1,9 @@
 @echo off
 setlocal
-title Bullweb DEBUG
+title Quota DEBUG
 cd /d "%~dp0"
 
-echo === Bullweb debug ===
+echo === Quota debug ===
 echo Cartella script: %~dp0
 echo Cartella attuale: %CD%
 echo.

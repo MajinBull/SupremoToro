@@ -1,10 +1,10 @@
 @echo off
 setlocal
-title Bullweb launcher
+title Quota launcher
 cd /d "%~dp0"
 
 echo.
-echo  Bullweb - avvio guidato
+echo  Quota - avvio guidato
 echo  Cartella: %CD%
 echo.
 echo  Dipendenze: serve la cartella node_modules in backend e frontend.
@@ -15,7 +15,7 @@ where node >nul 2>nul
 if errorlevel 1 (
   echo  ERRORE: Node.js non trovato nel PATH.
   echo  Scarica la versione LTS da https://nodejs.org
-  echo  Poi chiudi questa finestra, riapri Explorer e rilancia start-bullweb.cmd
+  echo  Poi chiudi questa finestra, riapri Explorer e rilancia start-bullweb.cmd (launcher Quota)
   goto :fine
 )
 
@@ -26,8 +26,8 @@ if errorlevel 1 (
 )
 
 if not exist "backend\package.json" (
-  echo  ERRORE: Questo file va nella cartella Bullweb - stesso livello di backend e frontend.
-  echo  Percorso atteso ...\Bullweb\start-bullweb.cmd
+  echo  ERRORE: Questo file va nella root del progetto Quota - stesso livello di backend e frontend.
+  echo  Percorso atteso ...\start-bullweb.cmd
   goto :fine
 )
 if not exist "frontend\package.json" (
@@ -67,8 +67,8 @@ echo  Apertura di due finestre CMD - backend su porta 3001, frontend Vite...
 echo.
 
 rem %ComSpec% = cmd.exe di sistema (percorso affidabile)
-start "Bullweb-backend" /D "%~dp0backend" "%ComSpec%" /k npm run dev
-start "Bullweb-frontend" /D "%~dp0frontend" "%ComSpec%" /k npm run dev
+start "Quota-backend" /D "%~dp0backend" "%ComSpec%" /k npm run dev
+start "Quota-frontend" /D "%~dp0frontend" "%ComSpec%" /k npm run dev
 
 echo  Se NON si aprono altre finestre, prova start-bullweb-debug.cmd nella stessa cartella.
 echo.

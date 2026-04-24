@@ -157,6 +157,6 @@ function numOrNull(v) {
 startSymbolRefreshLoop();
 
 app.listen(PORT, () => {
-  console.log(`Bullweb backend http://localhost:${PORT}`);
+  console.log(`Quota backend http://localhost:${PORT}`);
   console.log("Endpoint: GET /api/perpetuals, /api/tickers, /api/klines");
 });

@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+# Sitemap: aggiorna il dominio se usi solo apex o altro host
+Sitemap: https://www.quota.finance/sitemap.xml

@@ -3,7 +3,7 @@
 
 services:
   - type: web
-    name: bullweb-backend
+    name: quota-backend
     runtime: node
     plan: free
     rootDir: backend

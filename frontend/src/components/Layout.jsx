@@ -5,8 +5,10 @@ import { PriceAlertsTickerSync } from "../PriceAlertsContext.jsx";
 import MultiChartsPage from "../pages/MultiChartsPage.jsx";
 import { useTickers } from "../TickerContext.jsx";
 import AdSenseUnit from "./AdSenseUnit.jsx";
+import PrivacyModal from "./PrivacyModal.jsx";
+import SeoHead from "./SeoHead.jsx";
 
-const SESSION_CHARTS_TOP = "bullweb:chartsTopOpen";
+const SESSION_CHARTS_TOP = "quota:chartsTopOpen";
 
 function loadChartsTopOpen() {
   try {
@@ -27,6 +29,7 @@ export default function Layout() {
   const [chartsEverVisited, setChartsEverVisited] = useState(
     () => location.pathname === "/charts"
   );
+  const [privacyOpen, setPrivacyOpen] = useState(false);
 
   const {
     symbolCount,
@@ -102,10 +105,11 @@ export default function Layout() {
     <div
       className={`app-shell${isCharts ? " app-shell--charts-fill" : " app-shell--dashboard-fill"}`}
     >
+      <SeoHead />
       <PriceAlertsTickerSync />
       <header className="app-header">
         <div className="header-top-row">
-          <h1 className="header-site-title">SupremoToro</h1>
+          <h1 className="header-site-title">Quota</h1>
           {isCharts && (
             <div className="charts-header-actions">
               <button
@@ -255,19 +259,20 @@ export default function Layout() {
       </div>
 
       <footer className="app-footer">
-        <NavLink
-          to="/privacy"
-          className={({ isActive }) =>
-            `footer-link${isActive ? " footer-link-active" : ""}`
-          }
+        <button
+          type="button"
+          className="footer-link footer-link-button"
+          onClick={() => setPrivacyOpen(true)}
         >
           Privacy e cookie
-        </NavLink>
+        </button>
         <span className="footer-sep" aria-hidden="true">
           ·
         </span>
         <span className="footer-note">Pubblicità Google AdSense</span>
       </footer>
+
+      <PrivacyModal open={privacyOpen} onClose={() => setPrivacyOpen(false)} />
     </div>
   );
 }
