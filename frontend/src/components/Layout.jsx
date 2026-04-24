@@ -4,6 +4,7 @@ import { LayoutChartsContext } from "../LayoutChartsContext.jsx";
 import { PriceAlertsTickerSync } from "../PriceAlertsContext.jsx";
 import MultiChartsPage from "../pages/MultiChartsPage.jsx";
 import { useTickers } from "../TickerContext.jsx";
+import AdSenseUnit from "./AdSenseUnit.jsx";
 
 const SESSION_CHARTS_TOP = "bullweb:chartsTopOpen";
 
@@ -175,6 +176,14 @@ export default function Layout() {
               Dashboard
             </NavLink>
             <NavLink
+              to="/listings"
+              className={({ isActive }) =>
+                `nav-link${isActive ? " nav-link-active" : ""}`
+              }
+            >
+              Listati / delist
+            </NavLink>
+            <NavLink
               to="/charts"
               className={({ isActive }) =>
                 `nav-link${isActive ? " nav-link-active" : ""}`
@@ -205,6 +214,8 @@ export default function Layout() {
           {symbolsError && <div>Simboli: {symbolsError}</div>}
         </div>
       )}
+
+      <AdSenseUnit />
 
       <div
         className={`app-outlet${isCharts ? " app-outlet--charts" : " app-outlet--dashboard"}`}
@@ -242,6 +253,21 @@ export default function Layout() {
           )}
         </LayoutChartsContext.Provider>
       </div>
+
+      <footer className="app-footer">
+        <NavLink
+          to="/privacy"
+          className={({ isActive }) =>
+            `footer-link${isActive ? " footer-link-active" : ""}`
+          }
+        >
+          Privacy e cookie
+        </NavLink>
+        <span className="footer-sep" aria-hidden="true">
+          ·
+        </span>
+        <span className="footer-note">Pubblicità Google AdSense</span>
+      </footer>
     </div>
   );
 }

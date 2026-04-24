@@ -21,6 +21,8 @@ export function TickerProvider({ children }) {
   const [rows, setRows] = useState([]);
   const [symbolList, setSymbolList] = useState([]);
   const [symbolCount, setSymbolCount] = useState(0);
+  const [recentListings, setRecentListings] = useState([]);
+  const [delisted, setDelisted] = useState([]);
   const [lastTickerAt, setLastTickerAt] = useState(null);
   const [lastSymbolsAt, setLastSymbolsAt] = useState(null);
   const [tickerError, setTickerError] = useState(null);
@@ -55,6 +57,10 @@ export function TickerProvider({ children }) {
         return list;
       });
       setSymbolCount(meta.count ?? list.length ?? 0);
+      setRecentListings(
+        Array.isArray(meta.recentListings) ? meta.recentListings : [],
+      );
+      setDelisted(Array.isArray(meta.delisted) ? meta.delisted : []);
       setLastSymbolsAt(meta.lastUpdated || null);
       setSymbolsError(meta.lastError || null);
     } catch (e) {
@@ -101,6 +107,8 @@ export function TickerProvider({ children }) {
     () => ({
       rows,
       symbolCount,
+      recentListings,
+      delisted,
       lastTickerAt,
       lastSymbolsAt,
       tickerError,
@@ -110,6 +118,8 @@ export function TickerProvider({ children }) {
     [
       rows,
       symbolCount,
+      recentListings,
+      delisted,
       lastTickerAt,
       lastSymbolsAt,
       tickerError,

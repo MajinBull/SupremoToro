@@ -47,14 +47,13 @@ export async function bybitGet(path, query = {}) {
 }
 
 /**
- * Tutti i linear perpetual in Trading (paginazione cursor).
+ * Perpetual linear USDT in Trading con `launchTime` Bybit (ms UTC, inizio mercato / storia candele).
  */
-export async function fetchAllLinearPerpetualSymbols() {
-  const symbols = [];
+export async function fetchTradingUsdtLinearPerpetualDetails() {
+  const out = [];
   let cursor = undefined;
 
   do {
-    // Nessuno status: per linear la doc Bybit dice che di default sono solo Trading.
     const result = await bybitGet("/v5/market/instruments-info", {
       category: "linear",
       limit: "500",
@@ -63,19 +62,34 @@ export async function fetchAllLinearPerpetualSymbols() {
 
     const list = result.list || [];
     for (const row of list) {
-      // Solo perpetual linear margine USDT (esclude USDC, EUR, ecc.)
       if (
         row.contractType === "LinearPerpetual" &&
         row.status === "Trading" &&
         row.quoteCoin === "USDT"
       ) {
-        symbols.push(row.symbol);
+        const lt =
+          row.launchTime != null && row.launchTime !== ""
+            ? Number(row.launchTime)
+            : null;
+        out.push({
+          symbol: row.symbol,
+          launchTimeMs: Number.isFinite(lt) ? lt : null,
+        });
       }
     }
     cursor = result.nextPageCursor || "";
   } while (cursor);
 
-  return [...new Set(symbols)].sort();
+  out.sort((a, b) => a.symbol.localeCompare(b.symbol));
+  return out;
+}
+
+/**
+ * Solo elenco simboli (stesso universo di {@link fetchTradingUsdtLinearPerpetualDetails}).
+ */
+export async function fetchAllLinearPerpetualSymbols() {
+  const d = await fetchTradingUsdtLinearPerpetualDetails();
+  return d.map((x) => x.symbol);
 }
 
 /**

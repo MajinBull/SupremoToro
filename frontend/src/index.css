@@ -79,8 +79,95 @@ a {
 }
 
 .app-shell--dashboard-fill .app-header,
-.app-shell--dashboard-fill .error-banner {
+.app-shell--dashboard-fill .error-banner,
+.app-shell--dashboard-fill .adsense-wrap,
+.app-shell--dashboard-fill .app-footer {
   flex-shrink: 0;
+}
+
+.app-shell--charts-fill .adsense-wrap,
+.app-shell--charts-fill .app-footer {
+  flex-shrink: 0;
+}
+
+.adsense-wrap {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid var(--border);
+}
+
+.adsense-wrap .adsbygoogle {
+  min-height: 50px;
+  width: 100%;
+  max-width: min(100%, 728px);
+}
+
+.app-footer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem 0.5rem;
+  padding: 0.5rem 1rem 0.65rem;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  background: var(--bg-elevated);
+}
+
+.footer-link {
+  color: var(--accent);
+  text-decoration: none;
+}
+
+.footer-link:hover {
+  text-decoration: underline;
+}
+
+.footer-link-active {
+  font-weight: 600;
+}
+
+.footer-sep {
+  opacity: 0.45;
+  user-select: none;
+}
+
+.footer-note {
+  opacity: 0.75;
+}
+
+.legal-page {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 1rem 1.25rem 2rem;
+  max-width: 40rem;
+  margin: 0 auto;
+}
+
+.legal-page-title {
+  margin: 0 0 0.75rem;
+  font-size: 1.25rem;
+}
+
+.legal-page-p {
+  margin: 0 0 0.85rem;
+  font-size: 0.88rem;
+  line-height: 1.55;
+  color: var(--text-muted);
+}
+
+.legal-page-p strong {
+  color: var(--text);
+}
+
+.legal-page-muted {
+  font-size: 0.8rem !important;
+  opacity: 0.85;
 }
 
 .app-outlet--dashboard {
@@ -1167,4 +1254,136 @@ a {
   font-size: 0.72rem;
   color: var(--text-muted);
   border-top: 1px solid var(--border);
+}
+
+/* —— Listati / delist —— */
+.listings-page {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0.75rem 1.1rem 1.25rem;
+  scrollbar-width: thin;
+}
+
+.listings-intro {
+  margin: 0 0 0.5rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  max-width: 52rem;
+}
+
+.listings-intro code {
+  font-family: var(--font-mono);
+  font-size: 0.8em;
+  color: var(--text);
+}
+
+.listings-meta {
+  margin: 0 0 1rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.listings-banner {
+  margin-bottom: 1rem;
+  padding: 0.6rem 0.85rem;
+  border-radius: var(--radius);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  background: rgba(239, 68, 68, 0.08);
+  font-size: 0.85rem;
+  color: #fecaca;
+}
+
+.listings-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.25rem;
+}
+
+@media (min-width: 960px) {
+  .listings-grid {
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+}
+
+.listings-panel {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  padding: 0.85rem 1rem 1rem;
+  min-width: 0;
+}
+
+.listings-panel-title {
+  margin: 0 0 0.35rem;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.listings-panel-hint {
+  margin: 0 0 0.75rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.listings-empty {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.listings-table-wrap {
+  overflow-x: auto;
+  margin: 0 -0.25rem;
+}
+
+.listings-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+
+.listings-table th,
+.listings-table td {
+  text-align: left;
+  padding: 0.45rem 0.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  vertical-align: top;
+}
+
+.listings-table th {
+  color: var(--text-muted);
+  font-weight: 600;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.listings-table--recent th,
+.listings-table--recent td {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.listings-table--recent .listings-mono {
+  text-align: center;
+}
+
+.listings-table--recent .listings-days-num {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.listings-mono {
+  font-family: var(--font-mono);
+  font-weight: 600;
+}
+
+.listings-phases {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  max-width: 22rem;
 }
