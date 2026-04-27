@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { useLocation } from "react-router-dom";
+import { useI18n } from "../i18n/I18nContext.jsx";
 
 /** URL pubblico senza slash finale (es. https://www.quota.finance). Override con VITE_SITE_URL. */
 function siteBase() {
@@ -9,25 +10,12 @@ function siteBase() {
   return "";
 }
 
-const DEFAULT_DESC =
-  "Quota — dashboard perpetual linear USDT su Bybit: prezzi, volume 24h, funding, open interest e grafici candlestick. Dati pubblici, aggiornamento periodico.";
-
-const BY_ROUTE = {
-  "/": {
-    title: "Quota — Dashboard perpetual Bybit (USDT)",
-    description: DEFAULT_DESC,
-  },
-  "/listings": {
-    title: "Nuove listate e delisting — Quota",
-    description:
-      "Perpetual USDT Bybit in pre-lancio recente (entro 14 giorni da launchTime) e coppie delistate negli ultimi 14 giorni.",
-  },
-  "/charts": {
-    title: "Grafici multipli Bybit — Quota",
-    description:
-      "Griglia di grafici candlestick per perpetual USDT su Bybit, timeframe selezionabili.",
-  },
-};
+function routeSeoKey(pathname) {
+  if (pathname === "/listings") return "listings";
+  if (pathname === "/charts") return "charts";
+  if (pathname.startsWith("/game")) return "game";
+  return "home";
+}
 
 function setMetaName(name, content) {
   let el = document.querySelector(`meta[name="${name}"]`);
@@ -53,11 +41,28 @@ const JSON_LD_ID = "quota-jsonld";
 
 export default function SeoHead() {
   const { pathname } = useLocation();
-  const routeKey = BY_ROUTE[pathname] ? pathname : "/";
-  const { title, description } = BY_ROUTE[routeKey];
+  const { locale, t } = useI18n();
   const base = siteBase();
   const pathSuffix = pathname === "/" ? "" : pathname;
   const canonical = base ? `${base}${pathSuffix}` : "";
+
+  const seoKey = routeSeoKey(pathname);
+  const title =
+    seoKey === "home"
+      ? t("seo.homeTitle")
+      : seoKey === "listings"
+        ? t("seo.listingsTitle")
+        : seoKey === "charts"
+          ? t("seo.chartsTitle")
+          : t("seo.gameTitle");
+  const description =
+    seoKey === "home"
+      ? t("seo.defaultDescription")
+      : seoKey === "listings"
+        ? t("seo.listingsDesc")
+        : seoKey === "charts"
+          ? t("seo.chartsDesc")
+          : t("seo.gameDesc");
 
   useEffect(() => {
     document.title = title;
@@ -68,7 +73,7 @@ export default function SeoHead() {
       setMetaProperty("og:description", description);
       setMetaProperty("og:url", canonical || `${base}/`);
       setMetaProperty("og:type", "website");
-      setMetaProperty("og:locale", "it_IT");
+      setMetaProperty("og:locale", locale === "en" ? "en_US" : "it_IT");
       setMetaName("twitter:card", "summary_large_image");
       setMetaName("twitter:title", title);
       setMetaName("twitter:description", description);
@@ -86,8 +91,8 @@ export default function SeoHead() {
       "@context": "https://schema.org",
       "@type": "WebSite",
       name: "Quota",
-      description: DEFAULT_DESC,
-      inLanguage: "it-IT",
+      description: t("seo.defaultDescription"),
+      inLanguage: locale === "en" ? "en-US" : "it-IT",
     };
     if (base) websiteLd.url = `${base}/`;
 
@@ -99,7 +104,7 @@ export default function SeoHead() {
       document.head.appendChild(ldEl);
     }
     ldEl.textContent = JSON.stringify(websiteLd);
-  }, [title, description, pathname, canonical, base]);
+  }, [title, description, pathname, canonical, base, locale, t]);
 
   return null;
 }

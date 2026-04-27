@@ -14,9 +14,10 @@ import { normalizeAlertSymbol } from "../priceAlertsLogic.js";
 import { usePriceAlerts } from "../PriceAlertsContext.jsx";
 import { unlockAlertAudio } from "../priceAlertSound.js";
 import FavoriteStar from "./FavoriteStar.jsx";
+import { useI18n } from "../i18n/I18nContext.jsx";
 
 /** Etichette tempo compatte con zeri espliciti (evita artefatti tipo "18:0"). */
-function formatTimeScaleLabel(time) {
+function formatTimeScaleLabel(time, locale) {
   let d;
   if (typeof time === "number") {
     d = new Date(time * 1000);
@@ -29,7 +30,8 @@ function formatTimeScaleLabel(time) {
   }
   if (Number.isNaN(d.getTime())) return "";
   const day = String(d.getUTCDate()).padStart(2, "0");
-  const mon = d.toLocaleString("it-IT", { month: "short", timeZone: "UTC" });
+  const loc = locale === "en" ? "en-US" : "it-IT";
+  const mon = d.toLocaleString(loc, { month: "short", timeZone: "UTC" });
   const h = String(d.getUTCHours()).padStart(2, "0");
   const m = String(d.getUTCMinutes()).padStart(2, "0");
   return `${day} ${mon} ${h}:${m}`;
@@ -48,6 +50,8 @@ export default function MiniCandleChart({
   ema223On = false,
   onRemove,
 }) {
+  const { t, locale } = useI18n();
+  const chartLocale = locale === "en" ? "en-US" : "it-IT";
   const containerRef = useRef(null);
   const chartRef = useRef(null);
   const seriesRef = useRef(null);
@@ -122,8 +126,8 @@ export default function MiniCandleChart({
         fixRightEdge: false,
       },
       localization: {
-        locale: "it-IT",
-        timeFormatter: formatTimeScaleLabel,
+        locale: chartLocale,
+        timeFormatter: (time) => formatTimeScaleLabel(time, locale),
       },
       crosshair: { mode: 0 },
     });
@@ -211,7 +215,7 @@ export default function MiniCandleChart({
       seriesRef.current = null;
       emaLineRefs.current = { s10: null, s60: null, s223: null };
     };
-  }, [symbol]);
+  }, [symbol, locale, chartLocale]);
 
   useEffect(() => {
     setPendingAlertUi(null);
@@ -244,7 +248,7 @@ export default function MiniCandleChart({
         lineWidth: 1,
         lineStyle: LineStyle.Dotted,
         axisLabelVisible: true,
-        title: "Alert",
+        title: t("miniChart.priceLineAlert"),
       })
     );
     return () => {
@@ -252,7 +256,7 @@ export default function MiniCandleChart({
         series.removePriceLine(line);
       }
     };
-  }, [symbol, chartAlerts]);
+  }, [symbol, chartAlerts, t]);
 
   useEffect(() => {
     klineMetaRef.current = null;
@@ -298,7 +302,7 @@ export default function MiniCandleChart({
           processPriceUpdateRef.current(symbol, last.close);
         }
       } catch (e) {
-        if (!cancelled) setErr(e.message || "Errore kline");
+        if (!cancelled) setErr(e.message || t("miniChart.loadError"));
       } finally {
         if (!cancelled && firstLoad) {
           firstLoad = false;
@@ -353,7 +357,7 @@ export default function MiniCandleChart({
       window.clearInterval(pollId);
       unsubTrade();
     };
-  }, [symbol, interval, pollMs, liveTrades]);
+  }, [symbol, interval, pollMs, liveTrades, t]);
 
   useEffect(() => {
     refreshEmaLines();
@@ -371,8 +375,8 @@ export default function MiniCandleChart({
             type="button"
             className="mini-chart-remove"
             onClick={() => onRemove(symbol)}
-            title="Rimuovi grafico"
-            aria-label={`Rimuovi ${symbol}`}
+            title={t("miniChart.removeChart")}
+            aria-label={t("miniChart.removeSymbol", { symbol })}
           >
             ×
           </button>
@@ -382,7 +386,7 @@ export default function MiniCandleChart({
       <div
         className="mini-chart-body"
         ref={containerRef}
-        title="Tasto destro sul grafico → clic sulla campanella per creare un alert a quel prezzo"
+        title={t("miniChart.bodyTitle")}
       >
         {loading && <div className="chart-loading">…</div>}
         {pendingAlertUi && (
@@ -397,8 +401,13 @@ export default function MiniCandleChart({
             <button
               type="button"
               className="mini-chart-pending-alert-bell"
-              title={`Alert a ${pendingAlertUi.price}`}
-              aria-label={`Conferma alert prezzo ${pendingAlertUi.price} per ${symbol}`}
+              title={t("miniChart.alertPriceTitle", {
+                price: pendingAlertUi.price,
+              })}
+              aria-label={t("miniChart.confirmAlert", {
+                price: pendingAlertUi.price,
+                symbol,
+              })}
               onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => {
                 e.stopPropagation();

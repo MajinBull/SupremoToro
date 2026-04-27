@@ -15,6 +15,9 @@ import {
 const TICKER_POLL_MS = 15_000;
 const SYMBOL_META_POLL_MS = 60_000;
 
+/** Set when fetch fails; UI maps to translated message. */
+export const SYMBOLS_ERROR_FALLBACK = "__symbols_meta_unavailable__";
+
 const TickerContext = createContext(null);
 
 export function TickerProvider({ children }) {
@@ -64,7 +67,7 @@ export function TickerProvider({ children }) {
       setLastSymbolsAt(meta.lastUpdated || null);
       setSymbolsError(meta.lastError || null);
     } catch (e) {
-      setSymbolsError(e.message || "Metadati simboli non disponibili");
+      setSymbolsError(e.message || SYMBOLS_ERROR_FALLBACK);
     }
   }, []);
 
@@ -136,7 +139,7 @@ export function TickerProvider({ children }) {
 export function useTickers() {
   const ctx = useContext(TickerContext);
   if (!ctx) {
-    throw new Error("useTickers deve essere usato dentro TickerProvider");
+    throw new Error("useTickers must be used within TickerProvider");
   }
   return ctx;
 }

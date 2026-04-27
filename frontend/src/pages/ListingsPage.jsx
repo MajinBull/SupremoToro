@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useTickers } from "../TickerContext.jsx";
+import { useI18n } from "../i18n/I18nContext.jsx";
 
 function formatDt(iso) {
   if (!iso) return "—";
@@ -33,18 +34,19 @@ function openDaysInteger(iso) {
   return String(Math.floor(ms / DAY_MS));
 }
 
-function daysHoursUntil(iso) {
+function daysHoursUntil(iso, t) {
   if (!iso) return "—";
-  const t = new Date(iso).getTime() - Date.now();
-  if (t <= 0) return "—";
-  const d = Math.floor(t / (24 * 60 * 60 * 1000));
-  const h = Math.floor((t % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-  if (d > 0) return `${d}g ${h}h`;
-  const m = Math.floor((t % (60 * 60 * 1000)) / (60 * 1000));
-  return `${h}h ${m}m`;
+  const left = new Date(iso).getTime() - Date.now();
+  if (left <= 0) return "—";
+  const d = Math.floor(left / (24 * 60 * 60 * 1000));
+  const h = Math.floor((left % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+  if (d > 0) return t("listingsTime.dayHour", { d, h });
+  const m = Math.floor((left % (60 * 60 * 1000)) / (60 * 1000));
+  return t("listingsTime.hourMin", { h, m });
 }
 
 export default function ListingsPage() {
+  const { t } = useI18n();
   const { recentListings, delisted } = useTickers();
 
   const recentSorted = useMemo(
@@ -68,15 +70,15 @@ export default function ListingsPage() {
       <div className="listings-grid">
         <section className="listings-panel" aria-labelledby="listings-new-h">
           <h2 id="listings-new-h" className="listings-panel-title">
-            Nuove listate (ultimi 14 giorni)
+            {t("listings.newTitle")}
           </h2>
           <div className="listings-table-wrap">
             <table className="listings-table listings-table--recent">
               <thead>
                 <tr>
-                  <th>Coppia</th>
-                  <th>Giorno di lancio</th>
-                  <th>Aperta da</th>
+                  <th>{t("listings.pair")}</th>
+                  <th>{t("listings.launchDay")}</th>
+                  <th>{t("listings.openFor")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -99,16 +101,16 @@ export default function ListingsPage() {
           aria-labelledby="listings-delist-h"
         >
           <h2 id="listings-delist-h" className="listings-panel-title">
-            Delistate (ultimi 14 giorni)
+            {t("listings.delistTitle")}
           </h2>
           <div className="listings-table-wrap">
             <table className="listings-table">
               <thead>
                 <tr>
-                  <th>Simbolo</th>
-                  <th>Delisting (stima)</th>
-                  <th>Visibile fino a</th>
-                  <th>Tempo rimasto</th>
+                  <th>{t("listings.symbol")}</th>
+                  <th>{t("listings.delistEst")}</th>
+                  <th>{t("listings.visibleUntil")}</th>
+                  <th>{t("listings.timeLeft")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -117,7 +119,7 @@ export default function ListingsPage() {
                     <td className="listings-mono">{row.symbol}</td>
                     <td>{formatDt(row.delistedAt)}</td>
                     <td>{formatDt(row.visibleUntil)}</td>
-                    <td>{daysHoursUntil(row.visibleUntil)}</td>
+                    <td>{daysHoursUntil(row.visibleUntil, t)}</td>
                   </tr>
                 ))}
               </tbody>

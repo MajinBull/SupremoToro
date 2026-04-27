@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import {
   fmtFunding,
   fmtOpenInterest,
@@ -5,21 +6,8 @@ import {
   fmtPriceChange24h,
   fmtVolume,
 } from "../formatters.js";
+import { useI18n } from "../i18n/I18nContext.jsx";
 import FavoriteStar from "./FavoriteStar.jsx";
-
-const COLUMNS = [
-  { key: "symbol", label: "Simbolo", sortable: true },
-  { key: "lastPrice", label: "Prezzo", sortable: true },
-  {
-    key: "price24hPcnt",
-    label: "% 24h",
-    sortable: true,
-    title: "Variazione % prezzo (rolling 24h, come Bybit)",
-  },
-  { key: "volume24h", label: "Vol 24h", sortable: true },
-  { key: "fundingRate", label: "Funding", sortable: true },
-  { key: "openInterestValue", label: "OI ($)", sortable: true },
-];
 
 /**
  * Tabella perpetual con ordinamento su colonna e selezione riga.
@@ -32,12 +20,31 @@ export default function CryptoTable({
   selectedSymbol,
   onSelectSymbol,
 }) {
+  const { t } = useI18n();
+
+  const columns = useMemo(
+    () => [
+      { key: "symbol", label: t("cryptoTable.symbol"), sortable: true },
+      { key: "lastPrice", label: t("cryptoTable.price"), sortable: true },
+      {
+        key: "price24hPcnt",
+        label: t("cryptoTable.pct24h"),
+        sortable: true,
+        title: t("cryptoTable.pct24hTitle"),
+      },
+      { key: "volume24h", label: t("cryptoTable.vol24h"), sortable: true },
+      { key: "fundingRate", label: t("cryptoTable.funding"), sortable: true },
+      { key: "openInterestValue", label: t("cryptoTable.oi"), sortable: true },
+    ],
+    [t],
+  );
+
   return (
     <div className="table-scroll">
       <table className="data-table">
         <thead>
           <tr>
-            {COLUMNS.map((c) => (
+            {columns.map((c) => (
               <th
                 key={c.key}
                 title={c.title}
@@ -78,7 +85,7 @@ export default function CryptoTable({
                         ? "var(--negative)"
                         : undefined,
                 }}
-                title="Variazione % ultime 24 ore"
+                title={t("cryptoTable.pct24hRowTitle")}
               >
                 {row.missing ? (
                   <span className="cell-muted">—</span>

@@ -1,8 +1,10 @@
 import { useEffect, useRef } from "react";
 import { fmtPrice } from "../formatters.js";
 import { usePriceAlerts } from "../PriceAlertsContext.jsx";
+import { useI18n } from "../i18n/I18nContext.jsx";
 
 export default function PriceAlertsPanel({ open, onClose }) {
+  const { t } = useI18n();
   const { alerts, removePriceAlert, clearTriggeredAlerts } = usePriceAlerts();
   const panelRef = useRef(null);
   const closeBtnRef = useRef(null);
@@ -47,22 +49,19 @@ export default function PriceAlertsPanel({ open, onClose }) {
       >
         <div className="price-alerts-panel-head">
           <h2 id="price-alerts-title" className="price-alerts-title">
-            Alert prezzo
+            {t("priceAlerts.title")}
           </h2>
           <button
             ref={closeBtnRef}
             type="button"
             className="price-alerts-close"
             onClick={onClose}
-            aria-label="Chiudi"
+            aria-label={t("priceAlerts.close")}
           >
             ×
           </button>
         </div>
-        <p className="price-alerts-hint">
-          Tasto destro sul grafico al livello desiderato, poi clic sulla campanella per creare
-          l&apos;alert. Al tocco del prezzo suonerà un segnale acustico.
-        </p>
+        <p className="price-alerts-hint">{t("priceAlerts.hint")}</p>
         {triggered.length > 0 && (
           <div className="price-alerts-actions">
             <button
@@ -70,15 +69,13 @@ export default function PriceAlertsPanel({ open, onClose }) {
               className="price-alerts-clear-btn"
               onClick={() => clearTriggeredAlerts()}
             >
-              Rimuovi alert scattati ({triggered.length})
+              {t("priceAlerts.clearTriggered", { n: triggered.length })}
             </button>
           </div>
         )}
         <ul className="price-alerts-list">
           {alerts.length === 0 && (
-            <li className="price-alerts-empty">
-              Nessun alert. Tasto destro sul grafico e poi clic sulla campanella.
-            </li>
+            <li className="price-alerts-empty">{t("priceAlerts.empty")}</li>
           )}
           {alerts.map((a) => (
             <li
@@ -90,7 +87,7 @@ export default function PriceAlertsPanel({ open, onClose }) {
                 <span className="price-alerts-level">{fmtPrice(a.price)}</span>
                 {a.triggeredAt && (
                   <span className="price-alerts-badge" title={a.triggeredAt}>
-                    Scattato
+                    {t("priceAlerts.triggered")}
                   </span>
                 )}
               </div>
@@ -98,19 +95,24 @@ export default function PriceAlertsPanel({ open, onClose }) {
                 type="button"
                 className="price-alerts-remove"
                 onClick={() => removePriceAlert(a.id)}
-                aria-label={`Rimuovi alert ${a.symbol} ${a.price}`}
+                aria-label={t("priceAlerts.removeAria", {
+                  symbol: a.symbol,
+                  price: fmtPrice(a.price),
+                })}
               >
-                Rimuovi
+                {t("priceAlerts.remove")}
               </button>
             </li>
           ))}
         </ul>
         <p className="price-alerts-footer">
-          Attivi: <strong>{active.length}</strong>
+          {t("priceAlerts.footerActive")}{" "}
+          <strong>{active.length}</strong>
           {triggered.length > 0 && (
             <>
               {" "}
-              · Scattati: <strong>{triggered.length}</strong>
+              · {t("priceAlerts.footerTriggered")}{" "}
+              <strong>{triggered.length}</strong>
             </>
           )}
         </p>

@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useSyncExternalStore,
+} from "react";
 import { useLayoutChartsContext } from "../LayoutChartsContext.jsx";
 import { useFavorites } from "../FavoritesContext.jsx";
 import { useTickers } from "../TickerContext.jsx";
@@ -6,19 +13,13 @@ import { TIMEFRAMES } from "../timeframes.js";
 import MiniCandleChart from "../components/MiniCandleChart.jsx";
 import PriceAlertsPanel from "../components/PriceAlertsPanel.jsx";
 import { usePriceAlerts } from "../PriceAlertsContext.jsx";
+import { useI18n } from "../i18n/I18nContext.jsx";
 
 /** Celle della griglia: 2×2, 3×3 o 4×4 */
 const GRID_OPTIONS = [
   { value: 4, label: "4 (2×2)" },
   { value: 9, label: "9 (3×3)" },
   { value: 16, label: "16 (4×4)" },
-];
-
-const SORT_OPTIONS = [
-  { value: "favorites", label: "Preferiti (A→Z)" },
-  { value: "alpha", label: "Alfabetico (A→Z)" },
-  { value: "volume", label: "Volume 24h (↓)" },
-  { value: "change24h", label: "Variazione % 24h (↓)" },
 ];
 
 /** Secondi tra un refresh REST delle candele (allineamento; movimento live via WebSocket). */
@@ -32,15 +33,10 @@ const DATA_POLL_OPTIONS = [
   { value: 60, label: "60 s" },
 ];
 
-/** Secondi prima di passare alla “pagina” successiva di simboli (stesso ordinamento). */
-const ROTATE_OPTIONS = [
-  { value: 0, label: "No rotazione" },
-  { value: 15, label: "15 s" },
-  { value: 30, label: "30 s" },
-  { value: 45, label: "45 s" },
-  { value: 60, label: "1 min" },
-  { value: 120, label: "2 min" },
-  { value: 300, label: "5 min" },
+const ROTATE_VALUE_LIST = [0, 15, 30, 45, 60, 120, 300];
+const MIN_VOL_VALUE_LIST = [
+  0, 100_000, 500_000, 1_000_000, 5_000_000, 10_000_000, 50_000_000,
+  100_000_000,
 ];
 
 const STORAGE_GRID = "quota:multiChartGridCount";
@@ -56,20 +52,6 @@ const STORAGE_PIN_BTC_FIRST = "quota:multiChartPinBtcFirst";
 
 /** Perpetual linear USDT su Bybit (riferimento indice). */
 const ANCHOR_BTC_SYMBOL = "BTCUSDT";
-
-/**
- * Soglia minima volume 24h (USDT, come da ticker Bybit). 0 = disattivato.
- */
-const MIN_VOL_24H_OPTIONS = [
-  { value: 0, label: "Nessun minimo" },
-  { value: 100_000, label: "≥ 100K" },
-  { value: 500_000, label: "≥ 500K" },
-  { value: 1_000_000, label: "≥ 1M" },
-  { value: 5_000_000, label: "≥ 5M" },
-  { value: 10_000_000, label: "≥ 10M" },
-  { value: 50_000_000, label: "≥ 50M" },
-  { value: 100_000_000, label: "≥ 100M" },
-];
 
 /** Default alla prima apertura (nessun valore salvato in localStorage). */
 const DEFAULT_SORT = "change24h";
@@ -124,7 +106,7 @@ function loadRotateSec() {
     const stored = localStorage.getItem(STORAGE_ROTATE);
     if (stored === null || stored === "") return DEFAULT_ROTATE_SEC;
     const raw = Number(stored);
-    return ROTATE_OPTIONS.some((o) => o.value === raw) ? raw : DEFAULT_ROTATE_SEC;
+    return ROTATE_VALUE_LIST.includes(raw) ? raw : DEFAULT_ROTATE_SEC;
   } catch {
     return DEFAULT_ROTATE_SEC;
   }
@@ -145,7 +127,7 @@ function loadMinVol24h() {
     const raw = localStorage.getItem(STORAGE_MIN_VOL_24H);
     if (raw === null || raw === "") return 0;
     const n = Number(raw);
-    return MIN_VOL_24H_OPTIONS.some((o) => o.value === n) ? n : 0;
+    return MIN_VOL_VALUE_LIST.includes(n) ? n : 0;
   } catch {
     return 0;
   }
@@ -176,17 +158,98 @@ function colsForCount(n) {
   return 2;
 }
 
+/** Breakpoint allineato alle regole responsive grafici multipli header. */
+const CHARTS_MOBILE_MQ = "(max-width: 820px)";
+
+function subscribeChartsMobile(callback) {
+  const mq = window.matchMedia(CHARTS_MOBILE_MQ);
+  mq.addEventListener("change", callback);
+  return () => mq.removeEventListener("change", callback);
+}
+
+function getChartsMobileSnapshot() {
+  return window.matchMedia(CHARTS_MOBILE_MQ).matches;
+}
+
+function getChartsMobileServerSnapshot() {
+  return false;
+}
+
 /**
  * Schermata grafici multipli: griglia fissa 4 / 9 / 16, simboli dall’elenco ticker
  * ordinato; refresh candele e rotazione pagine a intervalli configurabili.
  */
 export default function MultiChartsPage() {
+  const { t } = useI18n();
+
+  const SORT_OPTIONS = useMemo(
+    () => [
+      { value: "favorites", label: t("charts.sortFavorites") },
+      { value: "alpha", label: t("charts.sortAlpha") },
+      { value: "volume", label: t("charts.sortVolume") },
+      { value: "change24h", label: t("charts.sortChange") },
+    ],
+    [t],
+  );
+
+  const ROTATE_OPTIONS = useMemo(
+    () => [
+      { value: 0, label: t("charts.rotateOff") },
+      { value: 15, label: "15 s" },
+      { value: 30, label: "30 s" },
+      { value: 45, label: "45 s" },
+      { value: 60, label: t("charts.rotateMin") },
+      { value: 120, label: t("charts.rotate2min") },
+      { value: 300, label: t("charts.rotate5min") },
+    ],
+    [t],
+  );
+
+  const MIN_VOL_24H_OPTIONS = useMemo(
+    () => [
+      { value: 0, label: t("charts.minNone") },
+      { value: 100_000, label: "≥ 100K" },
+      { value: 500_000, label: "≥ 500K" },
+      { value: 1_000_000, label: "≥ 1M" },
+      { value: 5_000_000, label: "≥ 5M" },
+      { value: 10_000_000, label: "≥ 10M" },
+      { value: 50_000_000, label: "≥ 50M" },
+      { value: 100_000_000, label: "≥ 100M" },
+    ],
+    [t],
+  );
+
   const {
     chartsTopOpen = true,
+    setChartsTopOpen = () => {},
     chartsRotationPaused = false,
     reportChartsRotationSchedule,
     registerChartsPageNav,
   } = useLayoutChartsContext();
+
+  const isMobileCharts = useSyncExternalStore(
+    subscribeChartsMobile,
+    getChartsMobileSnapshot,
+    getChartsMobileServerSnapshot
+  );
+
+  useEffect(() => {
+    if (!chartsTopOpen || !isMobileCharts) return undefined;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev;
+    };
+  }, [chartsTopOpen, isMobileCharts]);
+
+  useEffect(() => {
+    if (!chartsTopOpen || !isMobileCharts) return undefined;
+    const onKey = (e) => {
+      if (e.key === "Escape") setChartsTopOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [chartsTopOpen, isMobileCharts, setChartsTopOpen]);
   const { rows } = useTickers();
   const { favorites } = useFavorites();
 
@@ -526,13 +589,11 @@ export default function MultiChartsPage() {
   const gridRows = gridCols;
   const pollMs = dataPollSec * 1000;
 
-  return (
-    <div className="charts-page-fill">
-      {chartsTopOpen && (
-        <div className="charts-page-toolbar" id="charts-controls-panel">
-          <div className="toolbar toolbar--charts">
+  const chartsToolbarBody = (
+    <>
+      <div className="toolbar toolbar--charts">
             <div className="charts-toolbar-cluster">
-              <span className="charts-toolbar-cluster-label">Griglia</span>
+              <span className="charts-toolbar-cluster-label">{t("charts.grid")}</span>
               <div className="chart-toolbar tf-row-inline tf-row-inline--dense">
                 {GRID_OPTIONS.map((g) => (
                   <button
@@ -547,7 +608,7 @@ export default function MultiChartsPage() {
               </div>
             </div>
             <div className="charts-toolbar-cluster charts-toolbar-cluster--stretch">
-              <span className="charts-toolbar-cluster-label">Timeframe</span>
+              <span className="charts-toolbar-cluster-label">{t("charts.timeframe")}</span>
               <div className="chart-toolbar tf-row-inline tf-row-inline--dense">
                 {TIMEFRAMES.map((tf) => (
                   <button
@@ -562,12 +623,12 @@ export default function MultiChartsPage() {
               </div>
             </div>
             <div className="filter-group">
-              <label htmlFor="charts-sort-mode">Ordina / filtra</label>
+              <label htmlFor="charts-sort-mode">{t("charts.sortFilter")}</label>
               <select
                 id="charts-sort-mode"
                 value={sortMode}
                 onChange={(e) => setSortMode(e.target.value)}
-                aria-label="Ordinamento e filtro simboli"
+                aria-label={t("charts.sortAria")}
               >
                 {SORT_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>
@@ -577,13 +638,13 @@ export default function MultiChartsPage() {
               </select>
             </div>
             <div className="filter-group">
-              <label htmlFor="charts-min-vol-24h">Vol. 24h min</label>
+              <label htmlFor="charts-min-vol-24h">{t("charts.minVol")}</label>
               <select
                 id="charts-min-vol-24h"
                 value={minVol24hUSDT}
                 onChange={(e) => setMinVol24hUSDT(Number(e.target.value))}
-                aria-label="Volume minimo ultime 24 ore in USDT"
-                title="Esclude dalla griglia i perpetual con volume 24h sotto la soglia (USDT)"
+                aria-label={t("charts.minVolAria")}
+                title={t("charts.minVolTitle")}
               >
                 {MIN_VOL_24H_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>
@@ -593,12 +654,12 @@ export default function MultiChartsPage() {
               </select>
             </div>
             <div className="filter-group">
-              <label htmlFor="charts-poll-sec">Sync REST</label>
+              <label htmlFor="charts-poll-sec">{t("charts.syncRest")}</label>
               <select
                 id="charts-poll-sec"
                 value={dataPollSec}
                 onChange={(e) => setDataPollSec(Number(e.target.value))}
-                aria-label="Intervallo sincronizzazione REST candele"
+                aria-label={t("charts.syncRestAria")}
               >
                 {DATA_POLL_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>
@@ -608,12 +669,12 @@ export default function MultiChartsPage() {
               </select>
             </div>
             <div className="filter-group">
-              <label htmlFor="charts-rotate-sec">Ruota griglia</label>
+              <label htmlFor="charts-rotate-sec">{t("charts.rotateGrid")}</label>
               <select
                 id="charts-rotate-sec"
                 value={rotateSec}
                 onChange={(e) => setRotateSec(Number(e.target.value))}
-                aria-label="Intervallo rotazione simboli"
+                aria-label={t("charts.rotateAria")}
               >
                 {ROTATE_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>
@@ -629,8 +690,8 @@ export default function MultiChartsPage() {
                 onClick={() => setAlertsPanelOpen(true)}
                 aria-expanded={alertsPanelOpen}
                 aria-controls="price-alerts-dialog"
-                aria-label="Alert prezzo"
-                title="Gestisci gli alert prezzo"
+                aria-label={t("charts.alertsAria")}
+                title={t("charts.alertsTitle")}
               >
                 <svg
                   className="charts-alerts-round-icon"
@@ -664,14 +725,14 @@ export default function MultiChartsPage() {
               </button>
             </div>
             <div className="charts-toolbar-cluster">
-              <span className="charts-toolbar-cluster-label">Medie EMA</span>
+              <span className="charts-toolbar-cluster-label">{t("charts.ema")}</span>
               <div className="chart-toolbar tf-row-inline tf-row-inline--dense">
                 <button
                   type="button"
                   className={`tf-btn ${ema223On ? "active" : ""}`}
                   onClick={() => setEma223On((v) => !v)}
                   aria-pressed={ema223On}
-                  aria-label="Attiva o disattiva EMA 223"
+                  aria-label={t("charts.ema223Aria")}
                 >
                   EMA 223
                 </button>
@@ -680,7 +741,7 @@ export default function MultiChartsPage() {
                   className={`tf-btn ${ema60On ? "active" : ""}`}
                   onClick={() => setEma60On((v) => !v)}
                   aria-pressed={ema60On}
-                  aria-label="Attiva o disattiva EMA 60"
+                  aria-label={t("charts.ema60Aria")}
                 >
                   EMA 60
                 </button>
@@ -689,7 +750,7 @@ export default function MultiChartsPage() {
                   className={`tf-btn ${ema10On ? "active" : ""}`}
                   onClick={() => setEma10On((v) => !v)}
                   aria-pressed={ema10On}
-                  aria-label="Attiva o disattiva EMA 10"
+                  aria-label={t("charts.ema10Aria")}
                 >
                   EMA 10
                 </button>
@@ -698,9 +759,9 @@ export default function MultiChartsPage() {
             <div className="charts-toolbar-cluster charts-toolbar-cluster--summary-btc">
               <span
                 className="charts-toolbar-cluster-label charts-toolbar-cluster-label--stats"
-                title="Simboli nell’elenco dopo filtro volume 24h min, ordinamento e altri filtri attivi"
+                title={t("charts.statsTitle")}
               >
-                {sortedSymbols.length} simboli · {gridCount} in griglia
+                {t("charts.statsLine", { n: sortedSymbols.length, grid: gridCount })}
               </span>
               <div className="chart-toolbar chart-toolbar--summary-actions">
                 <button
@@ -710,12 +771,10 @@ export default function MultiChartsPage() {
                   aria-pressed={pinBtcFirst}
                   disabled={!hasAnchorBtc}
                   title={
-                    hasAnchorBtc
-                      ? "Attivo: BTCUSDT resta nella prima cella; con rotazione gli altri simboli scorrono intorno."
-                      : "Ticker BTC non ancora disponibile"
+                    hasAnchorBtc ? t("charts.btcIndexOn") : t("charts.btcIndexOff")
                   }
                 >
-                  BTC indice
+                  {t("charts.btcIndex")}
                 </button>
               </div>
             </div>
@@ -723,39 +782,83 @@ export default function MultiChartsPage() {
 
           {rotateSec > 0 && pageCount > 1 && (
             <p className="charts-rotate-status">
-              Gruppo simboli <strong>{pageIndex + 1}</strong> / <strong>{pageCount}</strong>
+              {t("charts.rotateStatus", {
+                cur: pageIndex + 1,
+                total: pageCount,
+              })}
               {chartsRotationPaused ? (
                 <>
                   {" — "}
-                  <strong>Rotazione in pausa</strong>
-                  {" "}(riparti dal tasto in alto)
+                  <strong>{t("charts.rotatePaused")}</strong>{" "}
+                  {t("charts.rotatePausedHint")}
                 </>
               ) : (
                 <>
                   {" — "}
-                  prossimo cambio tra <strong>{rotateSec}</strong> s
+                  {t("charts.rotateNext", { sec: rotateSec })}
                 </>
               )}
             </p>
           )}
+    </>
+  );
+
+  return (
+    <div className="charts-page-fill">
+      {chartsTopOpen && !isMobileCharts && (
+        <div className="charts-page-toolbar" id="charts-controls-panel">
+          {chartsToolbarBody}
+        </div>
+      )}
+      {chartsTopOpen && isMobileCharts && (
+        <div className="charts-settings-modal-root" role="presentation">
+          <div
+            className="charts-settings-modal-backdrop"
+            aria-hidden
+            onClick={() => setChartsTopOpen(false)}
+          />
+          <div
+            id="charts-controls-panel"
+            className="charts-settings-modal-dialog"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="charts-settings-modal-title"
+          >
+            <div className="charts-settings-modal-head">
+              <h2 id="charts-settings-modal-title">{t("charts.settingsTitle")}</h2>
+              <button
+                type="button"
+                className="charts-settings-modal-close"
+                onClick={() => setChartsTopOpen(false)}
+                aria-label={t("charts.closeSettings")}
+              >
+                ×
+              </button>
+            </div>
+            <div className="charts-settings-modal-body">
+              <div className="charts-page-toolbar charts-page-toolbar--modal-popup">
+                {chartsToolbarBody}
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
       <main className="charts-grid-main">
         {sortedSymbols.length === 0 && rows.length === 0 ? (
-          <div className="empty-state">Caricamento ticker…</div>
+          <div className="empty-state">{t("charts.loadingTicker")}</div>
         ) : sortedSymbols.length === 0 ? (
           <div className="empty-state">
             {sortMode === "favorites" && favorites.size === 0
-              ? "Nessun preferito: aggiungi le stelline dalla dashboard o dall’intestazione dei grafici."
+              ? t("charts.emptyFavoritesHint")
               : sortMode === "favorites"
-                ? "Nessun preferito con dati ticker nell’elenco. Riprova tra poco o aggiungi altri preferiti."
+                ? t("charts.emptyFavoritesData")
                 : minVol24hUSDT > 0 && rowsForCharts.length > 0
-                  ? "Nessun perpetual sopra la soglia di volume 24h. Abbassa «Vol. 24h min» o imposta «Nessun minimo»."
-                  : "Nessun simbolo disponibile con dati ticker. Riprova tra poco."}
+                  ? t("charts.emptyVol")
+                  : t("charts.emptyNoData")}
           </div>
         ) : slotSymbols.length === 0 ? (
-          <div className="empty-state">Caricamento ticker…</div>
+          <div className="empty-state">{t("charts.loadingTicker")}</div>
         ) : (
           <div
             className="charts-grid charts-grid--fixed"

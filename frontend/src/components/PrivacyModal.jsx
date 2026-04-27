@@ -1,6 +1,8 @@
 import { useEffect, useId } from "react";
+import { useI18n } from "../i18n/I18nContext.jsx";
 
 export default function PrivacyModal({ open, onClose }) {
+  const { t } = useI18n();
   const titleId = useId();
 
   useEffect(() => {
@@ -36,31 +38,22 @@ export default function PrivacyModal({ open, onClose }) {
       >
         <div className="privacy-modal-header">
           <h2 id={titleId} className="privacy-modal-title">
-            Privacy e cookie
+            {t("privacy.title")}
           </h2>
           <button
             type="button"
             className="privacy-modal-close"
             onClick={onClose}
-            aria-label="Chiudi"
+            aria-label={t("privacy.close")}
           >
             ×
           </button>
         </div>
         <div className="privacy-modal-body">
+          <p className="privacy-modal-p">{t("privacy.p1")}</p>
+          <p className="privacy-modal-p">{t("privacy.p2")}</p>
           <p className="privacy-modal-p">
-            Questo sito mostra dati di mercato pubblici (API Bybit). Non
-            raccogliamo dati personali tramite moduli o account su questa app.
-          </p>
-          <p className="privacy-modal-p">
-            Utilizziamo <strong>Google AdSense</strong> per la pubblicità.
-            Google può usare cookie o identificatori per annunci personalizzati
-            o non personalizzati. Puoi gestire le preferenze tramite le
-            impostazioni pubblicitarie di Google e la documentazione ufficiale
-            AdSense / Privacy &amp; Terms.
-          </p>
-          <p className="privacy-modal-p">
-            Informativa cookie di Google:{" "}
+            {t("privacy.p3Before")}{" "}
             <a
               href="https://policies.google.com/technologies/cookies"
               target="_blank"
@@ -70,9 +63,7 @@ export default function PrivacyModal({ open, onClose }) {
             </a>
           </p>
           <p className="privacy-modal-p privacy-modal-muted">
-            Ultimo aggiornamento: aprile 2026. Per richieste privacy contatta il
-            titolare del sito tramite i canali indicati su quota.finance (o
-            dominio attuale).
+            {t("privacy.footer")}
           </p>
         </div>
       </div>

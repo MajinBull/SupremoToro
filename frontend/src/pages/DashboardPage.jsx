@@ -1,8 +1,10 @@
 import { useMemo, useState } from "react";
+import { useGame } from "../GameContext.jsx";
 import { useFavorites } from "../FavoritesContext.jsx";
 import { useTickers } from "../TickerContext.jsx";
 import CryptoTable from "../components/CryptoTable.jsx";
 import ChartPanel from "../components/ChartPanel.jsx";
+import { useI18n } from "../i18n/I18nContext.jsx";
 
 function sortRows(rows, key, dir) {
   const mult = dir === "asc" ? 1 : -1;
@@ -21,8 +23,10 @@ function sortRows(rows, key, dir) {
 }
 
 export default function DashboardPage() {
+  const { t } = useI18n();
   const { rows, tickerError } = useTickers();
   const { favorites } = useFavorites();
+  const { recordDashboardChartOpen } = useGame();
 
   const [search, setSearch] = useState("");
   const [minVolFilter, setMinVolFilter] = useState("any");
@@ -50,9 +54,9 @@ export default function DashboardPage() {
       out = out.filter((r) => r.symbol.toLowerCase().includes(q));
     }
     const thresholds = { any: 0, "1m": 1e6, "10m": 1e7, "100m": 1e8 };
-    const t = thresholds[minVolFilter] ?? 0;
-    if (t > 0) {
-      out = out.filter((r) => (r.volume24h ?? 0) >= t);
+    const thresh = thresholds[minVolFilter] ?? 0;
+    if (thresh > 0) {
+      out = out.filter((r) => (r.volume24h ?? 0) >= thresh);
     }
     if (favoritesOnly) {
       out = out.filter((r) => favorites.has(r.symbol));
@@ -63,7 +67,13 @@ export default function DashboardPage() {
   const openChart = (symbol) => {
     setSelectedSymbol(symbol);
     setPanelOpen(true);
+    recordDashboardChartOpen();
   };
+
+  const countExtra =
+    search || minVolFilter !== "any" || favoritesOnly
+      ? t("dashboard.countFiltered", { total: rows.length })
+      : "";
 
   return (
     <>
@@ -72,20 +82,20 @@ export default function DashboardPage() {
           <div className="search-wrap">
             <input
               type="search"
-              placeholder="Cerca simbolo (es. BTC)..."
+              placeholder={t("dashboard.searchPlaceholder")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              aria-label="Cerca simbolo"
+              aria-label={t("dashboard.searchAria")}
             />
           </div>
           <div className="filter-group">
-            <label htmlFor="vol-filter">Vol min 24h</label>
+            <label htmlFor="vol-filter">{t("dashboard.volMinLabel")}</label>
             <select
               id="vol-filter"
               value={minVolFilter}
               onChange={(e) => setMinVolFilter(e.target.value)}
             >
-              <option value="any">Nessun filtro</option>
+              <option value="any">{t("dashboard.volAny")}</option>
               <option value="1m">≥ 1M</option>
               <option value="10m">≥ 10M</option>
               <option value="100m">≥ 100M</option>
@@ -99,29 +109,27 @@ export default function DashboardPage() {
               aria-pressed={favoritesOnly}
               title={
                 favoritesOnly
-                  ? "Mostra tutti i simboli"
-                  : "Mostra solo i preferiti"
+                  ? t("dashboard.favoritesOnTitle")
+                  : t("dashboard.favoritesOffTitle")
               }
             >
-              Solo preferiti ★
+              {t("dashboard.favoritesToggle")}
             </button>
           </div>
           <span className="count-pill">
-            {filteredSorted.length} righe
-            {search || minVolFilter !== "any" || favoritesOnly
-              ? ` (filtrate da ${rows.length})`
-              : ""}
+            {t("dashboard.countPill", { n: filteredSorted.length })}
+            {countExtra}
           </span>
         </div>
 
         <main className="main-area">
           {rows.length === 0 && !tickerError ? (
-            <div className="empty-state">Caricamento dati…</div>
+            <div className="empty-state">{t("dashboard.loading")}</div>
           ) : filteredSorted.length === 0 ? (
             <div className="empty-state">
               {favoritesOnly && favorites.size === 0
-                ? "Nessun preferito: usa la stellina accanto al simbolo per aggiungerne."
-                : "Nessun risultato con i filtri attuali."}
+                ? t("dashboard.emptyNoFavorites")
+                : t("dashboard.emptyFiltered")}
             </div>
           ) : (
             <CryptoTable

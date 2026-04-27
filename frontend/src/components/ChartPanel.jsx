@@ -10,6 +10,7 @@ import {
   safeCandlestickUpdate,
 } from "../chartKlineUpdate.js";
 import { candleFromTrade } from "../tradeBarUpdate.js";
+import { useI18n } from "../i18n/I18nContext.jsx";
 
 /**
  * Pannello laterale: grafico candlestick con refresh al cambio simbolo/intervallo.
@@ -21,6 +22,7 @@ export default function ChartPanel({
   pollMs = 1000,
   liveTrades = true,
 }) {
+  const { t } = useI18n();
   const containerRef = useRef(null);
   const chartRef = useRef(null);
   const seriesRef = useRef(null);
@@ -116,7 +118,7 @@ export default function ChartPanel({
           };
         }
       } catch (e) {
-        if (!cancelled) setErr(e.message || "Errore caricamento kline");
+        if (!cancelled) setErr(e.message || t("chartPanel.loadError"));
       } finally {
         if (!cancelled && firstLoad) {
           firstLoad = false;
@@ -167,7 +169,7 @@ export default function ChartPanel({
       window.clearInterval(pollId);
       unsubTrade();
     };
-  }, [open, symbol, chartInterval, pollMs, liveTrades]);
+  }, [open, symbol, chartInterval, pollMs, liveTrades, t]);
 
   if (!open || !symbol) return null;
 
@@ -178,11 +180,11 @@ export default function ChartPanel({
         onClick={onClose}
         aria-hidden
       />
-      <aside className={`drawer ${open ? "open" : ""}`} role="dialog" aria-label="Grafico">
+      <aside className={`drawer ${open ? "open" : ""}`} role="dialog" aria-label={t("chartPanel.aria")}>
         <div className="drawer-header">
           <h2 className="drawer-title">{symbol}</h2>
           <button type="button" className="drawer-close" onClick={onClose}>
-            Chiudi
+            {t("chartPanel.close")}
           </button>
         </div>
         <div className="chart-toolbar">
@@ -203,7 +205,7 @@ export default function ChartPanel({
           </div>
         )}
         <div className="chart-container" ref={containerRef}>
-          {loading && <div className="chart-loading">Caricamento…</div>}
+          {loading && <div className="chart-loading">{t("chartPanel.loading")}</div>}
         </div>
       </aside>
     </>

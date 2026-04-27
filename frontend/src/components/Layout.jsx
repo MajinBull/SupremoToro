@@ -1,12 +1,15 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, NavLink, useLocation } from "react-router-dom";
+import { useGame } from "../GameContext.jsx";
 import { LayoutChartsContext } from "../LayoutChartsContext.jsx";
 import { PriceAlertsTickerSync } from "../PriceAlertsContext.jsx";
 import MultiChartsPage from "../pages/MultiChartsPage.jsx";
-import { useTickers } from "../TickerContext.jsx";
+import { SYMBOLS_ERROR_FALLBACK, useTickers } from "../TickerContext.jsx";
 import AdSenseUnit from "./AdSenseUnit.jsx";
+import LanguageSwitcher from "./LanguageSwitcher.jsx";
 import PrivacyModal from "./PrivacyModal.jsx";
 import SeoHead from "./SeoHead.jsx";
+import { useI18n } from "../i18n/I18nContext.jsx";
 
 const SESSION_CHARTS_TOP = "quota:chartsTopOpen";
 
@@ -19,7 +22,13 @@ function loadChartsTopOpen() {
 }
 
 export default function Layout() {
+  const { t } = useI18n();
   const location = useLocation();
+  const {
+    recordListingsVisit,
+    recordChartsSectionVisit,
+  } = useGame();
+  const prevPathForGame = useRef(null);
   const isCharts = location.pathname === "/charts";
   const [chartsTopOpen, setChartsTopOpen] = useState(loadChartsTopOpen);
   const [chartsRotationPaused, setChartsRotationPaused] = useState(false);
@@ -30,14 +39,10 @@ export default function Layout() {
     () => location.pathname === "/charts"
   );
   const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [sideMenuOpen, setSideMenuOpen] = useState(false);
+  const [footerVisible, setFooterVisible] = useState(true);
 
-  const {
-    symbolCount,
-    lastTickerAt,
-    lastSymbolsAt,
-    tickerError,
-    symbolsError,
-  } = useTickers();
+  const { tickerError, symbolsError } = useTickers();
 
   useEffect(() => {
     try {
@@ -50,6 +55,26 @@ export default function Layout() {
   useEffect(() => {
     if (location.pathname === "/charts") setChartsEverVisited(true);
   }, [location.pathname]);
+
+  useEffect(() => {
+    setSideMenuOpen(false);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    const prev = prevPathForGame.current;
+    const path = location.pathname;
+    if (path === "/listings" && prev !== "/listings") {
+      recordListingsVisit();
+    }
+    if (path === "/charts" && prev !== "/charts") {
+      recordChartsSectionVisit();
+    }
+    prevPathForGame.current = path;
+  }, [
+    location.pathname,
+    recordListingsVisit,
+    recordChartsSectionVisit,
+  ]);
 
   const reportChartsRotationSchedule = useCallback((active) => {
     setChartsRotationScheduleActive(!!active);
@@ -70,37 +95,6 @@ export default function Layout() {
     ]
   );
 
-  const headerMeta = (
-    <div className="header-meta">
-      <span className="badge" title="Simboli in cache backend">
-        {symbolCount} perpetual
-      </span>
-      {lastTickerAt && (
-        <span className="badge">
-          Ticker: {new Date(lastTickerAt).toLocaleTimeString()}
-        </span>
-      )}
-      {lastSymbolsAt && (
-        <span className="badge">
-          Lista simboli: {new Date(lastSymbolsAt).toLocaleString()}
-        </span>
-      )}
-    </div>
-  );
-
-  const bybitSubtitle = (
-    <p className="subtitle">
-      Perpetual linear Bybit in USDT — dati pubblici, aggiornamento periodico.
-    </p>
-  );
-
-  const subtitleAndMeta = (
-    <>
-      {bybitSubtitle}
-      {headerMeta}
-    </>
-  );
-
   return (
     <div
       className={`app-shell${isCharts ? " app-shell--charts-fill" : " app-shell--dashboard-fill"}`}
@@ -110,66 +104,83 @@ export default function Layout() {
       <header className="app-header">
         <div className="header-top-row">
           <h1 className="header-site-title">Quota</h1>
-          {isCharts && (
-            <div className="charts-header-actions">
-              <button
-                type="button"
-                className="charts-top-toggle"
-                onClick={() => setChartsTopOpen((v) => !v)}
-                aria-expanded={chartsTopOpen}
-                aria-controls="charts-top-panel charts-controls-panel"
-                id="charts-top-toggle"
-              >
-                {chartsTopOpen ? "▲ Nascondi" : "▼ Mostra"}
-                <span className="sr-only">
-                  {" "}
-                  barra strumenti sotto l’intestazione
-                </span>
-              </button>
-              {chartsRotationScheduleActive && (
+          <div className="header-actions-right">
+            {isCharts && (
+              <div className="charts-header-actions">
                 <button
                   type="button"
-                  className={`charts-rotation-pause${chartsRotationPaused ? " charts-rotation-pause--active" : ""}`}
-                  onClick={() => setChartsRotationPaused((p) => !p)}
-                  aria-pressed={chartsRotationPaused}
-                  title={
-                    chartsRotationPaused
-                      ? "Riprendi il cambio automatico pagina griglia"
-                      : "Metti in pausa la rotazione automatica della griglia"
-                  }
+                  className="charts-top-toggle"
+                  onClick={() => setChartsTopOpen((v) => !v)}
+                  aria-expanded={chartsTopOpen}
+                  aria-controls="charts-controls-panel"
+                  id="charts-top-toggle"
                 >
-                  {chartsRotationPaused ? "▶ Rotazione" : "⏸ Pausa rotaz."}
+                  {chartsTopOpen ? t("layout.hideChartsPanel") : t("layout.showChartsSettings")}
+                  <span className="sr-only">
+                    {" "}
+                    {t("layout.chartsPanelSr")}
+                  </span>
                 </button>
-              )}
-              {chartsPageNav && (
-                <div
-                  className="charts-page-nav"
-                  role="group"
-                  aria-label="Gruppo simboli precedente o successivo"
-                >
+                {chartsRotationScheduleActive && (
                   <button
                     type="button"
-                    className="charts-page-step"
-                    onClick={chartsPageNav.goPrev}
-                    title="Gruppo precedente"
-                    aria-label="Gruppo precedente di simboli"
+                    className={`charts-rotation-pause${chartsRotationPaused ? " charts-rotation-pause--active" : ""}`}
+                    onClick={() => setChartsRotationPaused((p) => !p)}
+                    aria-pressed={chartsRotationPaused}
+                    title={
+                      chartsRotationPaused
+                        ? t("layout.rotationResumeTitle")
+                        : t("layout.rotationPauseTitle")
+                    }
                   >
-                    ‹
+                    {chartsRotationPaused ? t("layout.rotationResume") : t("layout.rotationPause")}
                   </button>
-                  <button
-                    type="button"
-                    className="charts-page-step"
-                    onClick={chartsPageNav.goNext}
-                    title="Gruppo successivo"
-                    aria-label="Gruppo successivo di simboli"
+                )}
+                {chartsPageNav && (
+                  <div
+                    className="charts-page-nav"
+                    role="group"
+                    aria-label={t("layout.chartsNavGroup")}
                   >
-                    ›
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
-          <nav className="main-nav" aria-label="Sezioni">
+                    <button
+                      type="button"
+                      className="charts-page-step"
+                      onClick={chartsPageNav.goPrev}
+                      title={t("layout.prevGroup")}
+                      aria-label={t("layout.prevGroupAria")}
+                    >
+                      ‹
+                    </button>
+                    <button
+                      type="button"
+                      className="charts-page-step"
+                      onClick={chartsPageNav.goNext}
+                      title={t("layout.nextGroup")}
+                      aria-label={t("layout.nextGroupAria")}
+                    >
+                      ›
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+            <button
+              type="button"
+              className={`app-menu-toggle${sideMenuOpen ? " app-menu-toggle--active" : ""}`}
+              onClick={() => setSideMenuOpen((v) => !v)}
+              aria-expanded={sideMenuOpen}
+              aria-controls="app-side-menu"
+              aria-label={t("layout.menuOpen")}
+              title={t("layout.menuOpenTitle")}
+            >
+              <span className="app-menu-toggle-icon" aria-hidden="true">
+                <span className="app-menu-toggle-line" />
+                <span className="app-menu-toggle-line" />
+                <span className="app-menu-toggle-line" />
+              </span>
+            </button>
+          </div>
+          <nav className="main-nav" aria-label={t("layout.mainNav")}>
             <NavLink
               to="/"
               end
@@ -177,7 +188,7 @@ export default function Layout() {
                 `nav-link${isActive ? " nav-link-active" : ""}`
               }
             >
-              Dashboard
+              {t("nav.dashboard")}
             </NavLink>
             <NavLink
               to="/listings"
@@ -185,7 +196,7 @@ export default function Layout() {
                 `nav-link${isActive ? " nav-link-active" : ""}`
               }
             >
-              Listati / delist
+              {t("nav.listings")}
             </NavLink>
             <NavLink
               to="/charts"
@@ -193,21 +204,80 @@ export default function Layout() {
                 `nav-link${isActive ? " nav-link-active" : ""}`
               }
             >
-              Grafici multipli
+              {t("nav.charts")}
+            </NavLink>
+            <NavLink
+              to="/game/checkin"
+              className={() =>
+                `nav-link${location.pathname.startsWith("/game") ? " nav-link-active" : ""}`
+              }
+            >
+              {t("nav.game")}
             </NavLink>
           </nav>
         </div>
-        {isCharts ? (
-          chartsTopOpen && (
-            <div id="charts-top-panel" className="charts-header-secondary">
-              {bybitSubtitle}
-              {headerMeta}
-            </div>
-          )
-        ) : (
-          subtitleAndMeta
-        )}
       </header>
+      <div
+        className={`app-side-menu-backdrop${sideMenuOpen ? " open" : ""}`}
+        onClick={() => setSideMenuOpen(false)}
+        aria-hidden
+      />
+      <aside
+        id="app-side-menu"
+        className={`app-side-menu${sideMenuOpen ? " open" : ""}`}
+        aria-hidden={!sideMenuOpen}
+        aria-label={t("layout.sideMenuTitle")}
+      >
+        <div className="app-side-menu-head">
+          <h2 className="app-side-menu-title">{t("layout.menuHeading")}</h2>
+          <button
+            type="button"
+            className="app-side-menu-close"
+            onClick={() => setSideMenuOpen(false)}
+            aria-label={t("layout.closeMenu")}
+          >
+            ×
+          </button>
+        </div>
+        <nav className="app-side-menu-links" aria-label={t("layout.sideNav")}>
+          <NavLink
+            to="/"
+            end
+            className={({ isActive }) =>
+              `app-side-menu-link${isActive ? " app-side-menu-link--active" : ""}`
+            }
+          >
+            {t("nav.dashboard")}
+          </NavLink>
+          <NavLink
+            to="/listings"
+            className={({ isActive }) =>
+              `app-side-menu-link${isActive ? " app-side-menu-link--active" : ""}`
+            }
+          >
+            {t("nav.listings")}
+          </NavLink>
+          <NavLink
+            to="/charts"
+            className={({ isActive }) =>
+              `app-side-menu-link${isActive ? " app-side-menu-link--active" : ""}`
+            }
+          >
+            {t("nav.charts")}
+          </NavLink>
+          <NavLink
+            to="/game/checkin"
+            className={() =>
+              `app-side-menu-link${location.pathname.startsWith("/game") ? " app-side-menu-link--active" : ""}`
+            }
+          >
+            {t("nav.game")}
+          </NavLink>
+        </nav>
+        <div className="app-side-menu-footer">
+          <LanguageSwitcher />
+        </div>
+      </aside>
 
       {(tickerError || symbolsError) && (
         <div
@@ -215,7 +285,14 @@ export default function Layout() {
           role="alert"
         >
           {tickerError && <div>{tickerError}</div>}
-          {symbolsError && <div>Simboli: {symbolsError}</div>}
+          {symbolsError && (
+            <div>
+              {t("layout.symbolsPrefix")}:{" "}
+              {symbolsError === SYMBOLS_ERROR_FALLBACK
+                ? t("errors.symbolsUnavailable")
+                : symbolsError}
+            </div>
+          )}
         </div>
       )}
 
@@ -258,19 +335,29 @@ export default function Layout() {
         </LayoutChartsContext.Provider>
       </div>
 
-      <footer className="app-footer">
-        <button
-          type="button"
-          className="footer-link footer-link-button"
-          onClick={() => setPrivacyOpen(true)}
-        >
-          Privacy e cookie
-        </button>
-        <span className="footer-sep" aria-hidden="true">
-          ·
-        </span>
-        <span className="footer-note">Pubblicità Google AdSense</span>
-      </footer>
+      {footerVisible && (
+        <footer className="app-footer app-footer--dismissible">
+          <button
+            type="button"
+            className="footer-link footer-link-button"
+            onClick={() => setPrivacyOpen(true)}
+          >
+            {t("layout.footerPrivacy")}
+          </button>
+          <span className="footer-sep" aria-hidden="true">
+            ·
+          </span>
+          <span className="footer-note">{t("layout.footerAds")}</span>
+          <button
+            type="button"
+            className="footer-close"
+            aria-label={t("layout.closeFooter")}
+            onClick={() => setFooterVisible(false)}
+          >
+            ×
+          </button>
+        </footer>
+      )}
 
       <PrivacyModal open={privacyOpen} onClose={() => setPrivacyOpen(false)} />
     </div>

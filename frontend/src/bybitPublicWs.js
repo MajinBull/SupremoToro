@@ -6,6 +6,8 @@
 const WS_URL = "wss://stream.bybit.com/v5/public/linear";
 const PING_MS = 20_000;
 const RECONNECT_MS = 2_500;
+/** Evita chiusura durante doppio mount (Strict Mode) o unsubscribe/resubscribe immediato. */
+const DISCONNECT_DEFER_MS = 280;
 
 /** @type {Map<string, Set<(rows: object[]) => void>>} */
 const listeners = new Map();
@@ -16,6 +18,8 @@ let ws = null;
 let pingTimer = null;
 /** @type {ReturnType<typeof setTimeout> | null} */
 let reconnectTimer = null;
+/** @type {ReturnType<typeof setTimeout> | null} */
+let disconnectDeferTimer = null;
 
 function tradeTopic(sym) {
   return `publicTrade.${sym.toUpperCase()}`;
@@ -115,17 +119,48 @@ function connect() {
   };
 }
 
-function disconnectIfIdle() {
+function clearDisconnectDefer() {
+  if (disconnectDeferTimer) {
+    clearTimeout(disconnectDeferTimer);
+    disconnectDeferTimer = null;
+  }
+}
+
+function performDisconnect() {
   if (listeners.size > 0) return;
   if (reconnectTimer) {
     clearTimeout(reconnectTimer);
     reconnectTimer = null;
   }
   stopPing();
-  if (ws) {
-    ws.close();
+  if (!ws) return;
+  const s = ws;
+  if (s.readyState === WebSocket.OPEN) {
+    s.close();
+  } else if (s.readyState === WebSocket.CONNECTING) {
+    s.addEventListener(
+      "open",
+      () => {
+        if (listeners.size === 0) s.close();
+      },
+      { once: true },
+    );
+  } else if (s.readyState === WebSocket.CLOSED) {
     ws = null;
   }
+}
+
+function disconnectIfIdle() {
+  if (listeners.size > 0) {
+    clearDisconnectDefer();
+    return;
+  }
+  if (disconnectDeferTimer) return;
+  disconnectDeferTimer = setTimeout(() => {
+    disconnectDeferTimer = null;
+    if (listeners.size > 0) return;
+    performDisconnect();
+  }, DISCONNECT_DEFER_MS);
 }
 
 /**
@@ -143,6 +178,7 @@ export function subscribePublicTrade(symbol, handler) {
     listeners.set(sym, set);
   }
   set.add(handler);
+  clearDisconnectDefer();
 
   if (firstForSymbol) {
     if (ws?.readyState === WebSocket.OPEN) {
