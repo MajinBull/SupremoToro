@@ -11,6 +11,7 @@ import {
 } from "../chartKlineUpdate.js";
 import { candleFromTrade } from "../tradeBarUpdate.js";
 import { useI18n } from "../i18n/I18nContext.jsx";
+import { useMarket } from "../MarketContext.jsx";
 
 /**
  * Pannello laterale: grafico candlestick con refresh al cambio simbolo/intervallo.
@@ -23,6 +24,7 @@ export default function ChartPanel({
   liveTrades = true,
 }) {
   const { t } = useI18n();
+  const { marketQuery } = useMarket();
   const containerRef = useRef(null);
   const chartRef = useRef(null);
   const seriesRef = useRef(null);
@@ -90,7 +92,7 @@ export default function ChartPanel({
       if (firstLoad) setLoading(true);
       setErr(null);
       try {
-        const { candles } = await fetchKlines(symbol, chartInterval);
+        const { candles } = await fetchKlines(symbol, chartInterval, marketQuery);
         if (cancelled || !seriesRef.current) return;
         const data = candles.map((c) => ({
           time: c.time,
@@ -131,37 +133,47 @@ export default function ChartPanel({
     const pollId = window.setInterval(load, pollMs);
 
     let unsubTrade = () => {};
-    if (liveTrades && typeof WebSocket !== "undefined") {
+    const bybitTradeCategory =
+      marketQuery.exchange === "bybit"
+        ? marketQuery.market === "spot"
+          ? "spot"
+          : "linear"
+        : null;
+    if (liveTrades && bybitTradeCategory && typeof WebSocket !== "undefined") {
       const sym = symbol.toUpperCase();
-      unsubTrade = subscribePublicTrade(symbol, (rows) => {
-        if (cancelled || !seriesRef.current) return;
-        let state = formingBarRef.current;
-        if (!state) return;
-        const sorted = [...rows].sort(
-          (a, b) => Number(a.T ?? 0) - Number(b.T ?? 0)
-        );
-        for (const row of sorted) {
-          if (row.s && String(row.s).toUpperCase() !== sym) continue;
-          const c = candleFromTrade(state, row.p, row.T, chartInterval);
-          if (!c) continue;
-          const next = {
-            time: c.time,
-            open: c.open,
-            high: c.high,
-            low: c.low,
-            close: c.close,
-          };
-          if (!safeCandlestickUpdate(seriesRef.current, c)) continue;
-          state = next;
-        }
-        formingBarRef.current = state;
-        if (klineMetaRef.current) {
-          klineMetaRef.current = {
-            firstT: klineMetaRef.current.firstT,
-            lastT: state.time,
-          };
-        }
-      });
+      unsubTrade = subscribePublicTrade(
+        symbol,
+        (rows) => {
+          if (cancelled || !seriesRef.current) return;
+          let state = formingBarRef.current;
+          if (!state) return;
+          const sorted = [...rows].sort(
+            (a, b) => Number(a.T ?? 0) - Number(b.T ?? 0)
+          );
+          for (const row of sorted) {
+            if (row.s && String(row.s).toUpperCase() !== sym) continue;
+            const c = candleFromTrade(state, row.p, row.T, chartInterval);
+            if (!c) continue;
+            const next = {
+              time: c.time,
+              open: c.open,
+              high: c.high,
+              low: c.low,
+              close: c.close,
+            };
+            if (!safeCandlestickUpdate(seriesRef.current, c)) continue;
+            state = next;
+          }
+          formingBarRef.current = state;
+          if (klineMetaRef.current) {
+            klineMetaRef.current = {
+              firstT: klineMetaRef.current.firstT,
+              lastT: state.time,
+            };
+          }
+        },
+        { category: bybitTradeCategory },
+      );
     }
 
     return () => {
@@ -169,7 +181,16 @@ export default function ChartPanel({
       window.clearInterval(pollId);
       unsubTrade();
     };
-  }, [open, symbol, chartInterval, pollMs, liveTrades, t]);
+  }, [
+    open,
+    symbol,
+    chartInterval,
+    pollMs,
+    liveTrades,
+    t,
+    marketQuery.exchange,
+    marketQuery.market,
+  ]);
 
   if (!open || !symbol) return null;
 

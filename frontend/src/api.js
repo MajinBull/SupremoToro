@@ -14,14 +14,24 @@ function apiUrl(path) {
   return `${API_BASE}${path}`;
 }
 
-export async function fetchPerpetuals() {
-  const res = await fetch(apiUrl("/api/perpetuals"), { headers: JSON_HEADERS });
+/** @param {{ exchange?: string, market?: string }} [params] */
+export async function fetchPerpetuals(params = {}) {
+  const exchange = params.exchange ?? "bybit";
+  const market = params.market ?? "derivatives";
+  const q = new URLSearchParams({ exchange, market });
+  const res = await fetch(apiUrl(`/api/perpetuals?${q}`), {
+    headers: JSON_HEADERS,
+  });
   if (!res.ok) throw new Error(`perpetuals ${res.status}`);
   return res.json();
 }
 
-export async function fetchTickers() {
-  const res = await fetch(apiUrl("/api/tickers"), { headers: JSON_HEADERS });
+/** @param {{ exchange?: string, market?: string }} [params] */
+export async function fetchTickers(params = {}) {
+  const exchange = params.exchange ?? "bybit";
+  const market = params.market ?? "derivatives";
+  const q = new URLSearchParams({ exchange, market });
+  const res = await fetch(apiUrl(`/api/tickers?${q}`), { headers: JSON_HEADERS });
   const data = await res.json();
   if (!res.ok) {
     const msg = data.error || `tickers ${res.status}`;
@@ -68,8 +78,21 @@ async function fetchKlinesViaAllOrigins(symbol, interval) {
   return parseBybitKlineBody(body, symbol, interval);
 }
 
-export async function fetchKlines(symbol, interval) {
-  const q = new URLSearchParams({ symbol, interval, limit: "500" });
+/**
+ * @param {string} symbol
+ * @param {string} interval
+ * @param {{ exchange?: string, market?: string }} [options]
+ */
+export async function fetchKlines(symbol, interval, options = {}) {
+  const exchange = options.exchange ?? "bybit";
+  const market = options.market ?? "derivatives";
+  const q = new URLSearchParams({
+    symbol,
+    interval,
+    limit: "500",
+    exchange,
+    market,
+  });
   try {
     const res = await fetch(apiUrl(`/api/klines?${q}`), {
       headers: JSON_HEADERS,
@@ -82,10 +105,13 @@ export async function fetchKlines(symbol, interval) {
     }
     return data;
   } catch (e) {
-    try {
-      return await fetchKlinesViaAllOrigins(symbol, interval);
-    } catch {
-      throw e;
+    if (exchange === "bybit" && market === "derivatives") {
+      try {
+        return await fetchKlinesViaAllOrigins(symbol, interval);
+      } catch {
+        throw e;
+      }
     }
+    throw e;
   }
 }

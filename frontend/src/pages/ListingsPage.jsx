@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { useMarket } from "../MarketContext.jsx";
 import { useTickers } from "../TickerContext.jsx";
 import { useI18n } from "../i18n/I18nContext.jsx";
 
@@ -47,7 +48,21 @@ function daysHoursUntil(iso, t) {
 
 export default function ListingsPage() {
   const { t } = useI18n();
+  const { exchange, marketType } = useMarket();
   const { recentListings, delisted } = useTickers();
+
+  const marketContextLine = useMemo(() => {
+    const segment =
+      marketType === "spot"
+        ? t("layout.spot")
+        : t("layout.derivatives");
+    const exchangeLabel =
+      exchange === "binance" ? "Binance" : "Bybit";
+    return t("listings.marketContext", {
+      exchange: exchangeLabel,
+      segment,
+    });
+  }, [exchange, marketType, t]);
 
   const recentSorted = useMemo(
     () =>
@@ -67,6 +82,7 @@ export default function ListingsPage() {
 
   return (
     <div className="listings-page">
+      <p className="listings-market-context">{marketContextLine}</p>
       <div className="listings-grid">
         <section className="listings-panel" aria-labelledby="listings-new-h">
           <h2 id="listings-new-h" className="listings-panel-title">

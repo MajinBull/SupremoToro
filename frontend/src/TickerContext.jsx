@@ -11,6 +11,7 @@ import {
   mapBybitWsTickerToRow,
   subscribeLinearTickers,
 } from "./bybitLinearTickerWs.js";
+import { useMarket } from "./MarketContext.jsx";
 
 const TICKER_POLL_MS = 15_000;
 const SYMBOL_META_POLL_MS = 60_000;
@@ -21,6 +22,7 @@ export const SYMBOLS_ERROR_FALLBACK = "__symbols_meta_unavailable__";
 const TickerContext = createContext(null);
 
 export function TickerProvider({ children }) {
+  const { marketQuery } = useMarket();
   const [rows, setRows] = useState([]);
   const [symbolList, setSymbolList] = useState([]);
   const [symbolCount, setSymbolCount] = useState(0);
@@ -30,25 +32,31 @@ export function TickerProvider({ children }) {
   const [lastSymbolsAt, setLastSymbolsAt] = useState(null);
   const [tickerError, setTickerError] = useState(null);
   const [symbolsError, setSymbolsError] = useState(null);
-  /** true se /api/tickers fallisce: usiamo WS dal browser (IP utente). */
+  /** Solo Bybit perpetual linear: fallback WS dal browser se REST fallisce. */
   const [useWsTickers, setUseWsTickers] = useState(false);
+
+  const allowsBybitLinearWsFallback =
+    marketQuery.exchange === "bybit" && marketQuery.market === "derivatives";
 
   const loadTickers = useCallback(async () => {
     try {
-      const data = await fetchTickers();
+      const data = await fetchTickers(marketQuery);
       setRows(data.rows || []);
       setLastTickerAt(data.updatedAt || new Date().toISOString());
       setTickerError(null);
       setUseWsTickers(false);
     } catch {
       setTickerError(null);
-      setUseWsTickers(true);
+      setUseWsTickers(allowsBybitLinearWsFallback);
+      if (!allowsBybitLinearWsFallback) {
+        setRows([]);
+      }
     }
-  }, []);
+  }, [marketQuery, allowsBybitLinearWsFallback]);
 
   const loadSymbolMeta = useCallback(async () => {
     try {
-      const meta = await fetchPerpetuals();
+      const meta = await fetchPerpetuals(marketQuery);
       const list = meta.symbols || [];
       setSymbolList((prev) => {
         if (
@@ -69,7 +77,11 @@ export function TickerProvider({ children }) {
     } catch (e) {
       setSymbolsError(e.message || SYMBOLS_ERROR_FALLBACK);
     }
-  }, []);
+  }, [marketQuery]);
+
+  useEffect(() => {
+    setUseWsTickers(false);
+  }, [marketQuery.exchange, marketQuery.market]);
 
   useEffect(() => {
     loadTickers();
@@ -83,7 +95,11 @@ export function TickerProvider({ children }) {
   }, [loadTickers, loadSymbolMeta]);
 
   useEffect(() => {
-    if (!useWsTickers || symbolList.length === 0) {
+    if (
+      !useWsTickers ||
+      !allowsBybitLinearWsFallback ||
+      symbolList.length === 0
+    ) {
       return undefined;
     }
 
@@ -104,7 +120,7 @@ export function TickerProvider({ children }) {
       const row = mapBybitWsTickerToRow(sym, raw);
       setRows((prev) => prev.map((r) => (r.symbol === sym ? row : r)));
     });
-  }, [useWsTickers, symbolList]);
+  }, [useWsTickers, allowsBybitLinearWsFallback, symbolList]);
 
   const value = useMemo(
     () => ({
@@ -117,6 +133,7 @@ export function TickerProvider({ children }) {
       tickerError,
       symbolsError,
       reloadTickers: loadTickers,
+      marketQuery,
     }),
     [
       rows,
@@ -128,6 +145,7 @@ export function TickerProvider({ children }) {
       tickerError,
       symbolsError,
       loadTickers,
+      marketQuery,
     ],
   );
 

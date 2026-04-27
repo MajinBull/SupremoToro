@@ -2,18 +2,33 @@ import { readFileSync } from "fs";
 import { dirname, join } from "path";
 import { fileURLToPath } from "url";
 import { SYMBOL_REFRESH_MS } from "./config.js";
-import { fetchTradingUsdtLinearPerpetualDetails } from "./bybit.js";
+import {
+  fetchTradingUsdtLinearPerpetualDetails,
+  fetchTradingUsdtSpotDetails,
+} from "./bybit.js";
+import {
+  fetchBinanceSpotUsdtInstrumentDetails,
+  fetchBinanceUsdtPerpetualInstrumentDetails,
+} from "./binanceApi.js";
 import { onTradingListRefreshed, getDelistedList } from "./listingTracker.js";
+import { MARKET_KEYS, listMarketKeys } from "./marketKey.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 
-/** Allineato alla richiesta UI: perpetual con meno di 14 giorni da `launchTime` Bybit. */
+/** Allineato alla richiesta UI: meno di 14 giorni da launch / onboard. */
 const RECENT_BY_LAUNCH_MS = 14 * 24 * 60 * 60 * 1000;
 
 const SNAPSHOT_PATH = join(
   __dirname,
   "../../api/data/linear-usdt-symbols.json",
 );
+
+const FETCH_DETAILS = {
+  [MARKET_KEYS.BYBIT_LINEAR]: fetchTradingUsdtLinearPerpetualDetails,
+  [MARKET_KEYS.BYBIT_SPOT]: fetchTradingUsdtSpotDetails,
+  [MARKET_KEYS.BINANCE_SPOT]: fetchBinanceSpotUsdtInstrumentDetails,
+  [MARKET_KEYS.BINANCE_FUTURES]: fetchBinanceUsdtPerpetualInstrumentDetails,
+};
 
 function loadSnapshotSymbols() {
   try {
@@ -35,81 +50,120 @@ function recentListingsFromLaunchMap(launchTimeMsBySymbol) {
     )
     .map(([symbol, ms]) => ({
       symbol,
-      /** Ufficiale Bybit: apertura trading (≈ inizio storico candele). */
       listedAt: new Date(ms).toISOString(),
       visibleUntil: new Date(ms + RECENT_BY_LAUNCH_MS).toISOString(),
     }))
     .sort((a, b) => new Date(b.listedAt) - new Date(a.listedAt));
 }
 
-let symbols = [];
-let launchTimeMsBySymbol = new Map();
-let lastUpdated = null;
-let lastError = null;
-let lastSuccessAt = 0;
-
-export function getSymbolCacheState() {
+function emptyState() {
   return {
-    symbols: [...symbols],
-    lastUpdated,
-    lastError,
-    count: symbols.length,
-    recentListings: recentListingsFromLaunchMap(launchTimeMsBySymbol),
-    delisted: getDelistedList(),
+    symbols: [],
+    launchTimeMsBySymbol: new Map(),
+    lastUpdated: null,
+    lastError: null,
+    lastSuccessAt: 0,
   };
 }
 
-export function getSymbolsSet() {
-  return new Set(symbols);
+/** @type {Map<string, ReturnType<typeof emptyState>>} */
+const caches = new Map();
+
+function getCache(marketKey) {
+  if (!caches.has(marketKey)) {
+    caches.set(marketKey, emptyState());
+  }
+  return caches.get(marketKey);
 }
 
-export async function refreshInstruments() {
+export function getSymbolCacheState(marketKey = MARKET_KEYS.BYBIT_LINEAR) {
+  const c = getCache(marketKey);
+  const delisted = getDelistedList(marketKey);
+  return {
+    symbols: [...c.symbols],
+    lastUpdated: c.lastUpdated,
+    lastError: c.lastError,
+    count: c.symbols.length,
+    recentListings: recentListingsFromLaunchMap(c.launchTimeMsBySymbol),
+    delisted,
+    marketKey,
+  };
+}
+
+/** Stato compatto per /api/health (tutti i mercati). */
+export function getAllMarketsCacheSummary() {
+  const out = {};
+  for (const key of listMarketKeys()) {
+    const c = getCache(key);
+    out[key] = {
+      count: c.symbols.length,
+      lastUpdated: c.lastUpdated,
+      lastError: c.lastError,
+    };
+  }
+  return out;
+}
+
+export function getSymbolsSet(marketKey = MARKET_KEYS.BYBIT_LINEAR) {
+  return new Set(getCache(marketKey).symbols);
+}
+
+export async function refreshInstruments(marketKey = MARKET_KEYS.BYBIT_LINEAR) {
+  const fetcher = FETCH_DETAILS[marketKey];
+  if (!fetcher) return;
+  const c = getCache(marketKey);
   try {
-    const previous = [...symbols];
-    const details = await fetchTradingUsdtLinearPerpetualDetails();
-    symbols = details.map((d) => d.symbol);
-    launchTimeMsBySymbol = new Map(
+    const previous = [...c.symbols];
+    const details = await fetcher();
+    c.symbols = details.map((d) => d.symbol);
+    c.launchTimeMsBySymbol = new Map(
       details.map((d) => [d.symbol, d.launchTimeMs]),
     );
-    onTradingListRefreshed(previous, symbols);
-    lastUpdated = new Date().toISOString();
-    lastError = null;
-    lastSuccessAt = Date.now();
+    onTradingListRefreshed(marketKey, previous, c.symbols);
+    c.lastUpdated = new Date().toISOString();
+    c.lastError = null;
+    c.lastSuccessAt = Date.now();
   } catch (e) {
     const msg = e.message || String(e);
-    console.error("[instrumentCache] refresh fallito:", msg);
-    const snap = loadSnapshotSymbols();
-    if (snap.length) {
-      symbols = snap;
-      launchTimeMsBySymbol = new Map();
-      lastUpdated = new Date().toISOString();
-      lastError = null;
-      lastSuccessAt = Date.now();
+    console.error(`[instrumentCache] refresh fallito (${marketKey}):`, msg);
+    if (marketKey === MARKET_KEYS.BYBIT_LINEAR) {
+      const snap = loadSnapshotSymbols();
+      if (snap.length) {
+        c.symbols = snap;
+        c.launchTimeMsBySymbol = new Map();
+        c.lastUpdated = new Date().toISOString();
+        c.lastError = null;
+        c.lastSuccessAt = Date.now();
+      } else {
+        c.lastError = msg;
+      }
     } else {
-      lastError = msg;
+      c.lastError = msg;
     }
   }
 }
 
-/**
- * Su server long-lived aggiorna a intervalli; su serverless evita refresh a ogni richiesta.
- */
-export async function ensureInstrumentsFresh() {
+export async function refreshAllInstruments() {
+  await Promise.all(listMarketKeys().map((k) => refreshInstruments(k)));
+}
+
+export async function ensureInstrumentsFresh(marketKey = MARKET_KEYS.BYBIT_LINEAR) {
+  const c = getCache(marketKey);
   const stale =
-    symbols.length === 0 ||
-    !!lastError ||
-    Date.now() - lastSuccessAt > SYMBOL_REFRESH_MS;
+    c.symbols.length === 0 ||
+    !!c.lastError ||
+    Date.now() - c.lastSuccessAt > SYMBOL_REFRESH_MS;
   if (stale) {
-    await refreshInstruments();
+    await refreshInstruments(marketKey);
   }
-  if (symbols.length === 0) {
+  if (c.symbols.length === 0 && marketKey === MARKET_KEYS.BYBIT_LINEAR) {
     const snap = loadSnapshotSymbols();
     if (snap.length) {
-      symbols = snap;
-      launchTimeMsBySymbol = new Map();
-      lastUpdated = new Date().toISOString();
-      lastError = null;
-      lastSuccessAt = Date.now();
+      c.symbols = snap;
+      c.launchTimeMsBySymbol = new Map();
+      c.lastUpdated = new Date().toISOString();
+      c.lastError = null;
+      c.lastSuccessAt = Date.now();
     }
   }
 }

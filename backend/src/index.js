@@ -6,9 +6,12 @@ import {
   getSymbolCacheState,
   getSymbolsSet,
   refreshSymbols,
+  ensureInstrumentsFresh,
 } from "./symbolCache.js";
-import { fetchLinearTickers, isUsdtLinearSymbol } from "./bybit.js";
-import { fetchKlines } from "./kline.js";
+import { getAllMarketsCacheSummary } from "./instrumentCache.js";
+import { marketKeyFromRequestQuery } from "./marketKey.js";
+import { fetchTickerRowsForMarket } from "./marketTickers.js";
+import { fetchKlinesForMarket } from "./marketKlines.js";
 
 const app = express();
 
@@ -26,81 +29,122 @@ app.use(
 );
 app.use(express.json());
 
+function queryExchangeMarket(req) {
+  const exchange = req.query.exchange || "bybit";
+  const market = req.query.market || "derivatives";
+  return { exchange, market };
+}
+
 /**
- * Lista perpetual linear USDT-margined in Trading (cache aggiornata periodicamente).
+ * Lista strumenti (cache per exchange × spot/derivatives).
+ * Query: exchange=bybit|binance, market=derivatives|spot
  */
-app.get("/api/perpetuals", (_req, res) => {
+app.get("/api/perpetuals", async (req, res) => {
   try {
-    res.json(getSymbolCacheState());
+    const mk = marketKeyFromRequestQuery(req);
+    await ensureInstrumentsFresh(mk);
+    const { exchange, market } = queryExchangeMarket(req);
+    res.json({
+      ...getSymbolCacheState(mk),
+      exchange,
+      market,
+    });
   } catch (e) {
     res.status(500).json({ error: e.message || "Errore stato simboli" });
   }
 });
 
 /**
- * Forza refresh lista simboli (utile dopo annunci di listature).
+ * Forza refresh lista simboli (tutti i mercati o uno specifico via query).
  */
-app.post("/api/perpetuals/refresh", async (_req, res) => {
+app.post("/api/perpetuals/refresh", async (req, res) => {
   try {
-    await refreshSymbols();
-    res.json(getSymbolCacheState());
+    const mk = req.query.exchange
+      ? marketKeyFromRequestQuery(req)
+      : null;
+    await refreshSymbols(mk || undefined);
+    if (mk) {
+      await ensureInstrumentsFresh(mk);
+      const { exchange, market } = queryExchangeMarket(req);
+      res.json({
+        ...getSymbolCacheState(mk),
+        exchange,
+        market,
+      });
+    } else {
+      res.json({
+        ok: true,
+        markets: getAllMarketsCacheSummary(),
+      });
+    }
   } catch (e) {
     res.status(502).json({ error: e.message || "Refresh fallito" });
   }
 });
 
 /**
- * Ticker linear: unisce snapshot Bybit con elenco simboli noti.
- * Include anche simboli presenti nei ticker ma non ancora in cache (nuove listature).
+ * Snapshot ticker unificato per mercato selezionato.
  */
-app.get("/api/tickers", async (_req, res) => {
+app.get("/api/tickers", async (req, res) => {
   try {
-    let known = getSymbolsSet();
-    // Primo avvio: la cache potrebbe non essere ancora pronta
+    const mk = marketKeyFromRequestQuery(req);
+    let known = getSymbolsSet(mk);
     if (known.size === 0) {
-      await refreshSymbols();
-      known = getSymbolsSet();
+      await ensureInstrumentsFresh(mk);
+      known = getSymbolsSet(mk);
     }
-    const list = await fetchLinearTickers();
-    const bySymbol = new Map(list.map((t) => [t.symbol, t]));
-
-    const rows = [];
-    for (const sym of known) {
-      const t = bySymbol.get(sym);
-      rows.push(normalizeTickerRow(sym, t));
-    }
-
-    for (const t of list) {
-      if (!known.has(t.symbol) && isLinearPerpTicker(t)) {
-        rows.push(normalizeTickerRow(t.symbol, t));
-      }
-    }
-
-    rows.sort((a, b) => a.symbol.localeCompare(b.symbol));
-    res.json({ updatedAt: new Date().toISOString(), rows });
+    const rows = await fetchTickerRowsForMarket(mk, known);
+    const { exchange, market } = queryExchangeMarket(req);
+    res.json({
+      updatedAt: new Date().toISOString(),
+      rows,
+      exchange,
+      market,
+      marketKey: mk,
+    });
   } catch (e) {
     console.error("[GET /api/tickers]", e);
     res.status(502).json({
-      error: e.message || "Ticker Bybit non disponibili",
+      error: e.message || "Ticker non disponibili",
       rows: [],
     });
   }
 });
 
 /**
- * Kline / candele per il grafico.
- * interval: 1, 5, 15, 60, 240, D (come da API Bybit v5)
+ * Candele per il grafico (stesso schema interval Bybit v5: 1, 5, 15, 60, 240, D).
  */
 app.get("/api/klines", async (req, res) => {
   res.set("Cache-Control", "no-store, no-cache, must-revalidate");
   res.set("Pragma", "no-cache");
-  const { symbol, interval = "15", limit = "500" } = req.query;
+  const {
+    symbol,
+    interval = "15",
+    limit = "500",
+    exchange,
+    market,
+  } = req.query;
   if (!symbol || typeof symbol !== "string") {
     return res.status(400).json({ error: "Query symbol obbligatorio" });
   }
+  const mk = marketKeyFromRequestQuery({
+    query: { exchange, market },
+  });
   try {
-    const candles = await fetchKlines(symbol.toUpperCase(), interval, limit);
-    res.json({ symbol: symbol.toUpperCase(), interval, candles });
+    const candles = await fetchKlinesForMarket(
+      mk,
+      symbol.toUpperCase(),
+      interval,
+      limit,
+    );
+    res.json({
+      symbol: symbol.toUpperCase(),
+      interval,
+      candles,
+      exchange: exchange || "bybit",
+      market: market || "derivatives",
+      marketKey: mk,
+    });
   } catch (e) {
     console.error("[GET /api/klines]", e);
     res.status(502).json({
@@ -111,52 +155,18 @@ app.get("/api/klines", async (req, res) => {
 });
 
 app.get("/api/health", (_req, res) => {
-  res.json({ ok: true, ...getSymbolCacheState() });
+  res.json({
+    ok: true,
+    markets: getAllMarketsCacheSummary(),
+    ...getSymbolCacheState(),
+  });
 });
-
-function isLinearPerpTicker(t) {
-  return isUsdtLinearSymbol(t?.symbol);
-}
-
-function normalizeTickerRow(symbol, t) {
-  if (!t) {
-    return {
-      symbol,
-      lastPrice: null,
-      volume24h: null,
-      price24hPcnt: null,
-      fundingRate: null,
-      openInterest: null,
-      openInterestValue: null,
-      missing: true,
-    };
-  }
-  return {
-    symbol: t.symbol,
-    lastPrice: numOrNull(t.lastPrice),
-    /**
-     * Allineato alla colonna Volume Bybit (USDT): `turnover24h` = turnover 24h in quote.
-     * `volume24h` nell’API è il volume in base/contratti, non va confuso con il volume USDT in UI.
-     */
-    volume24h: numOrNull(t.turnover24h ?? t.volume24h),
-    /** Variazione % prezzo ultime 24h (decimale Bybit, es. 0.025 = +2.5%) */
-    price24hPcnt: numOrNull(t.price24hPcnt),
-    fundingRate: numOrNull(t.fundingRate),
-    openInterest: numOrNull(t.openInterest),
-    openInterestValue: numOrNull(t.openInterestValue),
-    missing: false,
-  };
-}
-
-function numOrNull(v) {
-  if (v === undefined || v === null || v === "") return null;
-  const n = Number(v);
-  return Number.isFinite(n) ? n : null;
-}
 
 startSymbolRefreshLoop();
 
 app.listen(PORT, () => {
   console.log(`Quota backend http://localhost:${PORT}`);
-  console.log("Endpoint: GET /api/perpetuals, /api/tickers, /api/klines");
+  console.log(
+    "Endpoint: GET /api/perpetuals?exchange=&market=, /api/tickers, /api/klines",
+  );
 });

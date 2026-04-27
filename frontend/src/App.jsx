@@ -3,6 +3,7 @@ import { I18nProvider } from "./i18n/I18nContext.jsx";
 import { FavoritesProvider } from "./FavoritesContext.jsx";
 import { GameProvider } from "./GameContext.jsx";
 import { PriceAlertsProvider } from "./PriceAlertsContext.jsx";
+import { MarketProvider } from "./MarketContext.jsx";
 import { TickerProvider } from "./TickerContext.jsx";
 import Layout from "./components/Layout.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
@@ -23,6 +24,7 @@ export default function App() {
   return (
     <I18nProvider>
       <BrowserRouter>
+        <MarketProvider>
         <TickerProvider>
           <PriceAlertsProvider>
             <FavoritesProvider>
@@ -50,6 +52,7 @@ export default function App() {
             </FavoritesProvider>
           </PriceAlertsProvider>
         </TickerProvider>
+        </MarketProvider>
       </BrowserRouter>
     </I18nProvider>
   );

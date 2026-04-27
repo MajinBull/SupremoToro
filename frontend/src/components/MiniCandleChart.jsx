@@ -15,6 +15,7 @@ import { usePriceAlerts } from "../PriceAlertsContext.jsx";
 import { unlockAlertAudio } from "../priceAlertSound.js";
 import FavoriteStar from "./FavoriteStar.jsx";
 import { useI18n } from "../i18n/I18nContext.jsx";
+import { useMarket } from "../MarketContext.jsx";
 
 /** Etichette tempo compatte con zeri espliciti (evita artefatti tipo "18:0"). */
 function formatTimeScaleLabel(time, locale) {
@@ -51,6 +52,7 @@ export default function MiniCandleChart({
   onRemove,
 }) {
   const { t, locale } = useI18n();
+  const { marketQuery } = useMarket();
   const chartLocale = locale === "en" ? "en-US" : "it-IT";
   const containerRef = useRef(null);
   const chartRef = useRef(null);
@@ -270,7 +272,7 @@ export default function MiniCandleChart({
       if (firstLoad) setLoading(true);
       setErr(null);
       try {
-        const { candles } = await fetchKlines(symbol, interval);
+        const { candles } = await fetchKlines(symbol, interval, marketQuery);
         if (cancelled || !seriesRef.current) return;
         const data = candles.map((c) => ({
           time: c.time,
@@ -315,41 +317,51 @@ export default function MiniCandleChart({
     const pollId = window.setInterval(load, pollMs);
 
     let unsubTrade = () => {};
-    if (liveTrades && typeof WebSocket !== "undefined") {
+    const bybitTradeCategory =
+      marketQuery.exchange === "bybit"
+        ? marketQuery.market === "spot"
+          ? "spot"
+          : "linear"
+        : null;
+    if (liveTrades && bybitTradeCategory && typeof WebSocket !== "undefined") {
       const sym = symbol.toUpperCase();
-      unsubTrade = subscribePublicTrade(symbol, (rows) => {
-        if (cancelled || !seriesRef.current) return;
-        let state = formingBarRef.current;
-        if (!state) return;
-        const sorted = [...rows].sort(
-          (a, b) => Number(a.T ?? 0) - Number(b.T ?? 0)
-        );
-        for (const row of sorted) {
-          if (row.s && String(row.s).toUpperCase() !== sym) continue;
-          const c = candleFromTrade(state, row.p, row.T, interval);
-          if (!c) continue;
-          const next = {
-            time: c.time,
-            open: c.open,
-            high: c.high,
-            low: c.low,
-            close: c.close,
-          };
-          if (!safeCandlestickUpdate(seriesRef.current, c)) continue;
-          state = next;
-        }
-        formingBarRef.current = state;
-        if (klineMetaRef.current) {
-          klineMetaRef.current = {
-            firstT: klineMetaRef.current.firstT,
-            lastT: state.time,
-          };
-        }
-        refreshEmaLines();
-        if (Number.isFinite(state.close)) {
-          processPriceUpdateRef.current(symbol, state.close);
-        }
-      });
+      unsubTrade = subscribePublicTrade(
+        symbol,
+        (rows) => {
+          if (cancelled || !seriesRef.current) return;
+          let state = formingBarRef.current;
+          if (!state) return;
+          const sorted = [...rows].sort(
+            (a, b) => Number(a.T ?? 0) - Number(b.T ?? 0)
+          );
+          for (const row of sorted) {
+            if (row.s && String(row.s).toUpperCase() !== sym) continue;
+            const c = candleFromTrade(state, row.p, row.T, interval);
+            if (!c) continue;
+            const next = {
+              time: c.time,
+              open: c.open,
+              high: c.high,
+              low: c.low,
+              close: c.close,
+            };
+            if (!safeCandlestickUpdate(seriesRef.current, c)) continue;
+            state = next;
+          }
+          formingBarRef.current = state;
+          if (klineMetaRef.current) {
+            klineMetaRef.current = {
+              firstT: klineMetaRef.current.firstT,
+              lastT: state.time,
+            };
+          }
+          refreshEmaLines();
+          if (Number.isFinite(state.close)) {
+            processPriceUpdateRef.current(symbol, state.close);
+          }
+        },
+        { category: bybitTradeCategory },
+      );
     }
 
     return () => {
@@ -357,7 +369,15 @@ export default function MiniCandleChart({
       window.clearInterval(pollId);
       unsubTrade();
     };
-  }, [symbol, interval, pollMs, liveTrades, t]);
+  }, [
+    symbol,
+    interval,
+    pollMs,
+    liveTrades,
+    t,
+    marketQuery.exchange,
+    marketQuery.market,
+  ]);
 
   useEffect(() => {
     refreshEmaLines();

@@ -38,6 +38,17 @@ export const TRANSLATIONS = {
       footerPrivacy: "Privacy e cookie",
       footerAds: "Pubblicità Google AdSense",
       closeFooter: "Chiudi barra privacy e cookie",
+      marketDataTitle: "Fonte dati",
+      marketDataAria: "Exchange e mercato spot o derivati",
+      exchangeLabel: "Exchange",
+      productLabel: "Mercato",
+      derivatives: "Derivati",
+      spot: "Spot",
+      marketPresetLabel: "Mercato dati",
+      marketPresetBybitDerivatives: "Bybit derivati",
+      marketPresetBybitSpot: "Bybit spot",
+      marketPresetBinanceDerivatives: "Binance derivati",
+      marketPresetBinanceSpot: "Binance spot",
     },
     dashboard: {
       searchPlaceholder: "Cerca simbolo (es. BTC)...",
@@ -74,6 +85,7 @@ export const TRANSLATIONS = {
       delistEst: "Delisting (stima)",
       visibleUntil: "Visibile fino a",
       timeLeft: "Tempo rimasto",
+      marketContext: "Mercato selezionato nel menu: {exchange} · {segment}",
     },
     charts: {
       grid: "Griglia",
@@ -174,7 +186,7 @@ export const TRANSLATIONS = {
       homeTitle: "Quota — Dashboard perpetual Bybit (USDT)",
       listingsTitle: "Nuove listate e delisting — Quota",
       listingsDesc:
-        "Perpetual USDT Bybit in pre-lancio recente (entro 14 giorni da launchTime) e coppie delistate negli ultimi 14 giorni.",
+        "In base al mercato scelto (Bybit/Binance, spot o derivati): strumenti aggiunti di recente (entro 14 giorni dalla data di listato dell’exchange) e simboli usciti dal trading negli ultimi 14 giorni.",
       chartsTitle: "Grafici multipli Bybit — Quota",
       chartsDesc:
         "Griglia di grafici candlestick per perpetual USDT su Bybit, timeframe selezionabili.",
@@ -410,6 +422,17 @@ export const TRANSLATIONS = {
       footerPrivacy: "Privacy & cookies",
       footerAds: "Google AdSense advertising",
       closeFooter: "Close privacy & cookie bar",
+      marketDataTitle: "Market data",
+      marketDataAria: "Exchange and spot or derivatives",
+      exchangeLabel: "Exchange",
+      productLabel: "Market",
+      derivatives: "Derivatives",
+      spot: "Spot",
+      marketPresetLabel: "Market data",
+      marketPresetBybitDerivatives: "Bybit derivatives",
+      marketPresetBybitSpot: "Bybit spot",
+      marketPresetBinanceDerivatives: "Binance derivatives",
+      marketPresetBinanceSpot: "Binance spot",
     },
     dashboard: {
       searchPlaceholder: "Search symbol (e.g. BTC)...",
@@ -446,6 +469,7 @@ export const TRANSLATIONS = {
       delistEst: "Delisting (est.)",
       visibleUntil: "Visible until",
       timeLeft: "Time left",
+      marketContext: "Market selected in the menu: {exchange} · {segment}",
     },
     charts: {
       grid: "Grid",
@@ -544,7 +568,7 @@ export const TRANSLATIONS = {
       homeTitle: "Quota — Bybit perpetual dashboard (USDT)",
       listingsTitle: "New listings & delisting — Quota",
       listingsDesc:
-        "Recent Bybit USDT perpetual pre-launch (within 14 days of launchTime) and pairs delisted in the last 14 days.",
+        "For the selected market (Bybit/Binance, spot or derivatives): recently listed instruments (within 14 days of the exchange listing date) and symbols removed from trading in the last 14 days.",
       chartsTitle: "Multiple Bybit charts — Quota",
       chartsDesc:
         "Grid of candlestick charts for Bybit USDT perpetuals, selectable timeframes.",

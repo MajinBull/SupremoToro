@@ -10,6 +10,7 @@ import LanguageSwitcher from "./LanguageSwitcher.jsx";
 import PrivacyModal from "./PrivacyModal.jsx";
 import SeoHead from "./SeoHead.jsx";
 import { useI18n } from "../i18n/I18nContext.jsx";
+import { useMarket } from "../MarketContext.jsx";
 
 const SESSION_CHARTS_TOP = "quota:chartsTopOpen";
 
@@ -23,6 +24,65 @@ function loadChartsTopOpen() {
 
 export default function Layout() {
   const { t } = useI18n();
+  const { exchange, setExchange, marketType, setMarketType } = useMarket();
+
+  const marketPresetValue = `${exchange}-${
+    marketType === "spot" ? "spot" : "derivatives"
+  }`;
+
+  function applyMarketPreset(value) {
+    const i = value.indexOf("-");
+    if (i <= 0) return;
+    const ex = value.slice(0, i);
+    const mt = value.slice(i + 1);
+    if (ex !== "bybit" && ex !== "binance") return;
+    setExchange(ex);
+    setMarketType(mt === "spot" ? "spot" : "derivatives");
+  }
+
+  /** Toglie il focus dal native select dopo la scelta così non restano bordo/glow (:focus-visible). */
+  function handleMarketPresetChange(e) {
+    applyMarketPreset(e.target.value);
+    const el = e.currentTarget;
+    queueMicrotask(() => {
+      try {
+        el.blur();
+      } catch {
+        /* ignore */
+      }
+    });
+  }
+
+  function renderMarketPresetSelect(selectId, className, omitSrLabel = false) {
+    return (
+      <>
+        {!omitSrLabel && (
+          <label htmlFor={selectId} className="sr-only">
+            {t("layout.marketPresetLabel")}
+          </label>
+        )}
+        <select
+          id={selectId}
+          className={className}
+          value={marketPresetValue}
+          onChange={handleMarketPresetChange}
+        >
+          <option value="bybit-derivatives">
+            {t("layout.marketPresetBybitDerivatives")}
+          </option>
+          <option value="bybit-spot">
+            {t("layout.marketPresetBybitSpot")}
+          </option>
+          <option value="binance-derivatives">
+            {t("layout.marketPresetBinanceDerivatives")}
+          </option>
+          <option value="binance-spot">
+            {t("layout.marketPresetBinanceSpot")}
+          </option>
+        </select>
+      </>
+    );
+  }
   const location = useLocation();
   const {
     recordListingsVisit,
@@ -181,6 +241,12 @@ export default function Layout() {
             </button>
           </div>
           <nav className="main-nav" aria-label={t("layout.mainNav")}>
+            <div className="main-nav__market">
+              {renderMarketPresetSelect(
+                "quota-market-preset-desktop",
+                "header-market-select",
+              )}
+            </div>
             <NavLink
               to="/"
               end
@@ -274,6 +340,24 @@ export default function Layout() {
             {t("nav.game")}
           </NavLink>
         </nav>
+        <div
+          className="app-side-menu-market app-side-menu-market-mobile-only"
+          aria-label={t("layout.marketDataAria")}
+        >
+          <div className="app-side-menu-field">
+            <label
+              className="app-side-menu-field-label"
+              htmlFor="quota-market-preset-drawer"
+            >
+              {t("layout.marketPresetLabel")}
+            </label>
+            {renderMarketPresetSelect(
+              "quota-market-preset-drawer",
+              "app-side-menu-select",
+              true,
+            )}
+          </div>
+        </div>
         <div className="app-side-menu-footer">
           <LanguageSwitcher />
         </div>

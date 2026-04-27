@@ -108,3 +108,74 @@ export async function fetchLinearTickers() {
 export function isUsdtLinearSymbol(symbol) {
   return typeof symbol === "string" && symbol.endsWith("USDT");
 }
+
+/**
+ * Spot USDT in Trading (launched time se presente da API).
+ */
+export async function fetchTradingUsdtSpotDetails() {
+  const out = [];
+  let cursor = undefined;
+
+  do {
+    const result = await bybitGet("/v5/market/instruments-info", {
+      category: "spot",
+      limit: "500",
+      ...(cursor ? { cursor } : {}),
+    });
+
+    const list = result.list || [];
+    for (const row of list) {
+      if (
+        row.status === "Trading" &&
+        row.quoteCoin === "USDT" &&
+        typeof row.symbol === "string"
+      ) {
+        const lt =
+          row.launchTime != null && row.launchTime !== ""
+            ? Number(row.launchTime)
+            : null;
+        out.push({
+          symbol: row.symbol,
+          launchTimeMs: Number.isFinite(lt) ? lt : null,
+        });
+      }
+    }
+    cursor = result.nextPageCursor || "";
+  } while (cursor);
+
+  out.sort((a, b) => a.symbol.localeCompare(b.symbol));
+  return out;
+}
+
+/** Snapshot ticker spot (solo USDT dalla lista ticker). */
+export async function fetchSpotTickers() {
+  const result = await bybitGet("/v5/market/tickers", {
+    category: "spot",
+  });
+  const list = result.list || [];
+  return list.filter((t) => isUsdtLinearSymbol(t?.symbol));
+}
+
+/**
+ * Candele spot (stessi codici interval della linear Bybit v5).
+ */
+export async function fetchSpotKlines(symbol, interval, limit = "500") {
+  const cap = Math.min(Number(limit) || 500, 1000);
+  const result = await bybitGet("/v5/market/kline", {
+    category: "spot",
+    symbol,
+    interval: String(interval),
+    limit: String(cap),
+  });
+
+  const raw = result.list || [];
+  const sorted = [...raw].sort((a, b) => Number(a[0]) - Number(b[0]));
+
+  return sorted.map((row) => ({
+    time: Math.floor(Number(row[0]) / 1000),
+    open: Number(row[1]),
+    high: Number(row[2]),
+    low: Number(row[3]),
+    close: Number(row[4]),
+  }));
+}

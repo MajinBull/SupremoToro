@@ -1,4 +1,5 @@
 :root {
+  color-scheme: dark;
   --bg: #0f1115;
   --bg-elevated: #161a22;
   --border: #2a3140;
@@ -1482,6 +1483,14 @@ a {
 .listings-page::-webkit-scrollbar {
   width: 0;
   height: 0;
+}
+
+.listings-market-context {
+  margin: 0 0 0.85rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  max-width: 52rem;
+  line-height: 1.45;
 }
 
 .listings-intro {
@@ -3248,6 +3257,82 @@ label.game-bet-funds-heading {
   gap: 0.45rem;
 }
 
+@media (min-width: 821px) {
+  .app-side-menu-market-mobile-only {
+    display: none !important;
+  }
+}
+
+/* Selettore mercato in main-nav: stesso peso/stile dei .nav-link (desktop) */
+.main-nav__market {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  margin-right: 0.15rem;
+}
+
+.main-nav .header-market-select {
+  appearance: none;
+  cursor: pointer;
+  margin: 0;
+  /* Padding come .nav-link + spazio freccia a destra */
+  padding: 0.4rem 1.65rem 0.4rem 0.75rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  font-family: inherit;
+  font-size: 0.875rem;
+  font-weight: 500;
+  line-height: 1.25;
+  color: var(--text-muted);
+  text-decoration: none;
+  background-color: transparent;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b939e' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.5rem center;
+  background-size: 11px;
+  color-scheme: dark;
+  width: max-content;
+  max-width: min(16rem, 90vw);
+  field-sizing: content;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease,
+    border-color 0.15s ease;
+}
+
+/* Come .nav-link:hover */
+.main-nav .header-market-select:hover {
+  color: var(--text);
+  background-color: rgba(255, 255, 255, 0.06);
+}
+
+.main-nav .header-market-select:focus {
+  outline: none;
+}
+
+/* Solo Tab da tastiera: feedback accessibile */
+.main-nav .header-market-select:focus-visible {
+  color: var(--text);
+  background-color: rgba(255, 255, 255, 0.06);
+  border-color: rgba(59, 130, 246, 0.35);
+  box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.25);
+}
+
+/* Click mouse: senza alone persistente dopo la scelta (abbraccia blur() in onChange) */
+.main-nav .header-market-select:focus:not(:focus-visible) {
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.main-nav .header-market-select:active {
+  background-color: rgba(255, 255, 255, 0.08);
+}
+
+.main-nav .header-market-select option {
+  background: var(--bg-elevated);
+  color: var(--text);
+}
+
 .app-menu-toggle {
   display: none;
   align-items: center;
@@ -3319,6 +3404,75 @@ label.game-bet-funds-heading {
 
 .app-side-menu.open {
   transform: translateX(0);
+}
+
+.app-side-menu-market {
+  flex-shrink: 0;
+  padding: 0.65rem 0.9rem 0.75rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.app-side-menu-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.28rem;
+}
+
+.app-side-menu-field-label {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.app-side-menu-select {
+  appearance: none;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 0.48rem 2rem 0.48rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  background-color: transparent;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238b939e' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.55rem center;
+  background-size: 11px;
+  color: var(--text-muted);
+  cursor: pointer;
+  color-scheme: dark;
+  transition:
+    border-color 0.15s ease,
+    background-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.app-side-menu-select:hover {
+  border-color: rgba(59, 130, 246, 0.45);
+  background-color: rgba(59, 130, 246, 0.1);
+  color: var(--accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+}
+
+.app-side-menu-select:focus {
+  outline: none;
+}
+
+/* Solo tastiera: evidenza come hover (mouse usa :hover) */
+.app-side-menu-select:focus-visible {
+  border-color: rgba(59, 130, 246, 0.45);
+  background-color: rgba(59, 130, 246, 0.1);
+  color: var(--accent);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%233b82f6' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.app-side-menu-select option {
+  background: var(--bg-elevated);
+  color: var(--text);
 }
 
 .app-side-menu-head {
