@@ -12,6 +12,13 @@ export const TRANSLATIONS = {
       charts: "Grafici multipli",
       game: "Game",
     },
+    auth: {
+      signIn: "Accedi",
+      signOut: "Esci",
+      signInAria: "Accedi con Google",
+      loading: "…",
+      errorGeneric: "Accesso non riuscito. Riprova.",
+    },
     layout: {
       hideChartsPanel: "▲ Nascondi",
       showChartsSettings: "▼ Configurazioni",
@@ -173,7 +180,7 @@ export const TRANSLATIONS = {
       title: "Privacy e cookie",
       close: "Chiudi",
       p1:
-        "Questo sito mostra dati di mercato pubblici (API Bybit). Non raccogliamo dati personali tramite moduli o account su questa app.",
+        "Questo sito mostra dati di mercato pubblici. Se accedi con Google, salviamo i dati minimi dell'account Firebase e le preferenze dell'app, come preferiti, alert prezzo e progressi Game.",
       p2:
         "Utilizziamo Google AdSense per la pubblicità. Google può usare cookie o identificatori per annunci personalizzati o non personalizzati. Puoi gestire le preferenze tramite le impostazioni pubblicitarie di Google e la documentazione ufficiale AdSense / Privacy & Terms.",
       p3Before: "Informativa cookie di Google:",
@@ -398,6 +405,13 @@ export const TRANSLATIONS = {
       charts: "Multiple charts",
       game: "Game",
     },
+    auth: {
+      signIn: "Sign in",
+      signOut: "Sign out",
+      signInAria: "Sign in with Google",
+      loading: "…",
+      errorGeneric: "Sign-in failed. Try again.",
+    },
     layout: {
       hideChartsPanel: "▲ Hide",
       showChartsSettings: "▼ Settings",
@@ -555,7 +569,7 @@ export const TRANSLATIONS = {
       title: "Privacy & cookies",
       close: "Close",
       p1:
-        "This site displays public market data (Bybit API). We do not collect personal data through forms or accounts in this app.",
+        "This site displays public market data. If you sign in with Google, we store the minimum Firebase account data and app preferences, such as favorites, price alerts, and Game progress.",
       p2:
         "We use Google AdSense for ads. Google may use cookies or identifiers for personalized or non-personalized ads. You can manage preferences via Google’s ad settings and the official AdSense / Privacy & Terms documentation.",
       p3Before: "Google cookie policy:",

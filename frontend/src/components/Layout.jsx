@@ -6,6 +6,7 @@ import { PriceAlertsTickerSync } from "../PriceAlertsContext.jsx";
 import MultiChartsPage from "../pages/MultiChartsPage.jsx";
 import { SYMBOLS_ERROR_FALLBACK, useTickers } from "../TickerContext.jsx";
 import AdSenseUnit from "./AdSenseUnit.jsx";
+import AuthBar from "./AuthBar.jsx";
 import LanguageSwitcher from "./LanguageSwitcher.jsx";
 import PrivacyModal from "./PrivacyModal.jsx";
 import SeoHead from "./SeoHead.jsx";
@@ -165,6 +166,7 @@ export default function Layout() {
         <div className="header-top-row">
           <h1 className="header-site-title">Quota</h1>
           <div className="header-actions-right">
+            <AuthBar />
             {isCharts && (
               <div className="charts-header-actions">
                 <button

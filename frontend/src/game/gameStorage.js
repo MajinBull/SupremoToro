@@ -69,7 +69,7 @@ export function getDefaultGameState() {
   return defaultGameState();
 }
 
-function normalizeGameState(p) {
+export function normalizeGameState(p) {
   const base = defaultGameState();
   if (!p || typeof p !== "object") return base;
   const dates = Array.isArray(p.checkInDates)
@@ -114,4 +114,25 @@ export function saveGameState(state) {
   } catch {
     /* quota / private mode */
   }
+}
+
+export function mergeGameStates(local, cloud) {
+  const a = normalizeGameState(local);
+  const b = normalizeGameState(cloud);
+  const checkInDates = [...new Set([...a.checkInDates, ...b.checkInDates])].sort();
+  const missionsXpClaimed = [
+    ...new Set([...a.missionsXpClaimed, ...b.missionsXpClaimed]),
+  ];
+  const stats = {};
+  for (const k of Object.keys(defaultGameState().stats)) {
+    stats[k] = Math.max(a.stats[k] ?? 0, b.stats[k] ?? 0);
+  }
+  return {
+    checkInDates,
+    stats,
+    totalXp: Math.max(a.totalXp ?? 0, b.totalXp ?? 0),
+    totalPoints: Math.max(a.totalPoints ?? 0, b.totalPoints ?? 0),
+    username: b.username || a.username || "",
+    missionsXpClaimed,
+  };
 }

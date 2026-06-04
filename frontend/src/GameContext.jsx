@@ -6,7 +6,9 @@ import {
   useMemo,
   useState,
 } from "react";
+import { useAuth } from "./auth/AuthContext.jsx";
 import { useFavorites } from "./FavoritesContext.jsx";
+import { loadUserData, saveUserData } from "./firebase/userData.js";
 import {
   BADGES,
   isCheckInDoneToday,
@@ -25,6 +27,7 @@ import {
   GAME_STORAGE_KEY,
   getDefaultGameState,
   loadGameState,
+  mergeGameStates,
   saveGameState,
   todayLocal,
 } from "./game/gameStorage.js";
@@ -34,8 +37,10 @@ import { useI18n } from "./i18n/I18nContext.jsx";
 const GameContext = createContext(null);
 
 function useGameStateValue(t) {
+  const { user } = useAuth();
   const { favorites } = useFavorites();
   const [game, setGame] = useState(() => loadGameState());
+  const [cloudReadyUid, setCloudReadyUid] = useState(null);
   const [rewardToasts, setRewardToasts] = useState([]);
 
   useEffect(() => {
@@ -51,6 +56,42 @@ function useGameStateValue(t) {
     window.addEventListener("storage", onStorage);
     return () => window.removeEventListener("storage", onStorage);
   }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+    const uid = user?.uid ?? null;
+    setCloudReadyUid(null);
+    if (!uid) return undefined;
+
+    loadUserData(uid)
+      .then((data) => {
+        if (cancelled) return;
+        setGame((local) => {
+          const merged = mergeGameStates(local, data?.game);
+          saveGameState(merged);
+          saveUserData(uid, { game: merged }).catch(() => {
+            /* keep local fallback */
+          });
+          return merged;
+        });
+        setCloudReadyUid(uid);
+      })
+      .catch(() => {
+        if (!cancelled) setCloudReadyUid(uid);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.uid]);
+
+  useEffect(() => {
+    const uid = user?.uid ?? null;
+    if (!uid || cloudReadyUid !== uid) return;
+    saveUserData(uid, { game }).catch(() => {
+      /* keep local fallback */
+    });
+  }, [game, user?.uid, cloudReadyUid]);
 
   const persist = useCallback((updater) => {
     setGame((prev) => {

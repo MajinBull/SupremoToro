@@ -6,16 +6,26 @@ import {
   useMemo,
   useState,
 } from "react";
+import { useAuth } from "./auth/AuthContext.jsx";
+import { loadUserData, saveUserData } from "./firebase/userData.js";
 
 const STORAGE_KEY = "quota:favoriteSymbols";
+
+function normalizeFavorites(value) {
+  if (!Array.isArray(value)) return new Set();
+  return new Set(value.filter((s) => typeof s === "string"));
+}
+
+function serializeFavorites(favorites) {
+  return [...favorites].sort((a, b) => a.localeCompare(b));
+}
 
 function loadInitial() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return new Set();
     const arr = JSON.parse(raw);
-    if (!Array.isArray(arr)) return new Set();
-    return new Set(arr.filter((s) => typeof s === "string"));
+    return normalizeFavorites(arr);
   } catch {
     return new Set();
   }
@@ -24,18 +34,53 @@ function loadInitial() {
 const FavoritesContext = createContext(null);
 
 export function FavoritesProvider({ children }) {
+  const { user } = useAuth();
   const [favorites, setFavorites] = useState(() => loadInitial());
+  const [cloudReadyUid, setCloudReadyUid] = useState(null);
 
   useEffect(() => {
     try {
-      localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify([...favorites].sort((a, b) => a.localeCompare(b))),
-      );
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(serializeFavorites(favorites)));
     } catch {
       // ignore quota / private mode
     }
   }, [favorites]);
+
+  useEffect(() => {
+    let cancelled = false;
+    const uid = user?.uid ?? null;
+    setCloudReadyUid(null);
+    if (!uid) return undefined;
+
+    loadUserData(uid)
+      .then((data) => {
+        if (cancelled) return;
+        const cloud = normalizeFavorites(data?.favorites);
+        setFavorites((local) => {
+          const merged = new Set([...local, ...cloud]);
+          saveUserData(uid, { favorites: serializeFavorites(merged) }).catch(() => {
+            /* keep local fallback */
+          });
+          return merged;
+        });
+        setCloudReadyUid(uid);
+      })
+      .catch(() => {
+        if (!cancelled) setCloudReadyUid(uid);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user?.uid]);
+
+  useEffect(() => {
+    const uid = user?.uid ?? null;
+    if (!uid || cloudReadyUid !== uid) return;
+    saveUserData(uid, { favorites: serializeFavorites(favorites) }).catch(() => {
+      /* keep local fallback */
+    });
+  }, [favorites, user?.uid, cloudReadyUid]);
 
   const isFavorite = useCallback(
     (symbol) => favorites.has(symbol),

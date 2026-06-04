@@ -3257,6 +3257,67 @@ label.game-bet-funds-heading {
   gap: 0.45rem;
 }
 
+.auth-bar {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 0.5rem;
+  max-width: min(100%, 14rem);
+}
+
+.auth-bar__loading {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.auth-bar__avatar {
+  border-radius: 50%;
+  flex-shrink: 0;
+  object-fit: cover;
+  border: 1px solid var(--border);
+}
+
+.auth-bar__name {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  max-width: 6.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.auth-bar__btn {
+  flex-shrink: 0;
+  padding: 0.35rem 0.65rem;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.auth-bar__btn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+  background: rgba(59, 130, 246, 0.1);
+}
+
+.auth-bar__btn--primary {
+  color: var(--text);
+  border-color: rgba(59, 130, 246, 0.45);
+  background: rgba(59, 130, 246, 0.12);
+}
+
+.auth-bar__error {
+  font-size: 0.7rem;
+  color: #fecaca;
+  width: 100%;
+}
+
 @media (min-width: 821px) {
   .app-side-menu-market-mobile-only {
     display: none !important;

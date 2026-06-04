@@ -1,4 +1,5 @@
 import { BrowserRouter, Navigate, Route, Routes } from "react-router-dom";
+import { AuthProvider } from "./auth/AuthContext.jsx";
 import { I18nProvider } from "./i18n/I18nContext.jsx";
 import { FavoritesProvider } from "./FavoritesContext.jsx";
 import { GameProvider } from "./GameContext.jsx";
@@ -23,6 +24,7 @@ function ChartsRoutePlaceholder() {
 export default function App() {
   return (
     <I18nProvider>
+      <AuthProvider>
       <BrowserRouter>
         <MarketProvider>
         <TickerProvider>
@@ -54,6 +56,7 @@ export default function App() {
         </TickerProvider>
         </MarketProvider>
       </BrowserRouter>
+      </AuthProvider>
     </I18nProvider>
   );
 }
