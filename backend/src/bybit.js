@@ -92,33 +92,6 @@ export async function fetchAllLinearPerpetualSymbols() {
   return d.map((x) => x.symbol);
 }
 
-/** Perpetual USDT chiusi recentemente, ricavati direttamente da Bybit. */
-export async function fetchRecentlyClosedUsdtLinearPerpetuals() {
-  const out = [];
-  let cursor;
-  do {
-    const result = await bybitGet("/v5/market/instruments-info", {
-      category: "linear",
-      status: "Closed",
-      limit: "1000",
-      ...(cursor ? { cursor } : {}),
-    });
-    for (const row of result.list || []) {
-      const deliveryTimeMs = Number(row.deliveryTime);
-      if (
-        row.contractType === "LinearPerpetual" &&
-        row.quoteCoin === "USDT" &&
-        Number.isFinite(deliveryTimeMs) &&
-        deliveryTimeMs > 0
-      ) {
-        out.push({ symbol: row.symbol, delistedAtMs: deliveryTimeMs });
-      }
-    }
-    cursor = result.nextPageCursor || "";
-  } while (cursor);
-  return out;
-}
-
 /**
  * Snapshot ticker per category linear (tutti i simboli in una chiamata).
  */

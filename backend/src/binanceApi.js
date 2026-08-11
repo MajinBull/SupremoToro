@@ -74,25 +74,6 @@ export async function fetchBinanceUsdtPerpetualInstrumentDetails() {
   return out;
 }
 
-/** Contratti perpetual USDT non piu in trading con data di chiusura nota. */
-export async function fetchRecentlyClosedBinanceUsdtPerpetuals() {
-  const data = await binanceJson(`${BINANCE_FUTURES}/fapi/v1/exchangeInfo`);
-  const out = [];
-  for (const s of data.symbols || []) {
-    const deliveryTimeMs = Number(s.deliveryDate);
-    if (
-      s.status !== "TRADING" &&
-      s.contractType === "PERPETUAL" &&
-      s.quoteAsset === "USDT" &&
-      Number.isFinite(deliveryTimeMs) &&
-      deliveryTimeMs > 0
-    ) {
-      out.push({ symbol: s.symbol, delistedAtMs: deliveryTimeMs });
-    }
-  }
-  return out;
-}
-
 /** @returns {Map<string, object>} */
 export async function fetchBinanceSpotTickerMap() {
   const arr = await binanceJson(`${BINANCE_SPOT}/api/v3/ticker/24hr`);

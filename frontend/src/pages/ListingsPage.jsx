@@ -46,6 +46,13 @@ function daysHoursUntil(iso, t) {
   return t("listingsTime.hourMin", { h, m });
 }
 
+function delistingCountdownTarget(row) {
+  const eventMs = new Date(row.delistedAt).getTime();
+  return Number.isFinite(eventMs) && eventMs > Date.now()
+    ? row.delistedAt
+    : row.visibleUntil;
+}
+
 export default function ListingsPage() {
   const { t } = useI18n();
   const { exchange, marketType } = useMarket();
@@ -98,6 +105,13 @@ export default function ListingsPage() {
                 </tr>
               </thead>
               <tbody>
+                {recentSorted.length === 0 && (
+                  <tr>
+                    <td className="listings-empty" colSpan={3}>
+                      {t("listings.emptyRecent")}
+                    </td>
+                  </tr>
+                )}
                 {recentSorted.map((row) => (
                   <tr key={row.symbol}>
                     <td className="listings-mono">{row.symbol}</td>
@@ -130,12 +144,19 @@ export default function ListingsPage() {
                 </tr>
               </thead>
               <tbody>
+                {delistedSorted.length === 0 && (
+                  <tr>
+                    <td className="listings-empty" colSpan={4}>
+                      {t("listings.emptyDelisted")}
+                    </td>
+                  </tr>
+                )}
                 {delistedSorted.map((row) => (
                   <tr key={row.symbol}>
                     <td className="listings-mono">{row.symbol}</td>
                     <td>{formatDt(row.delistedAt)}</td>
                     <td>{formatDt(row.visibleUntil)}</td>
-                    <td>{daysHoursUntil(row.visibleUntil, t)}</td>
+                    <td>{daysHoursUntil(delistingCountdownTarget(row), t)}</td>
                   </tr>
                 ))}
               </tbody>
