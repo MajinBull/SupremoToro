@@ -3,7 +3,7 @@ import { fetchKlines } from "../api.js";
 import { useI18n } from "../i18n/I18nContext.jsx";
 import { useTickers } from "../TickerContext.jsx";
 
-const THRESHOLD_PCT = 5;
+const RANGE_FACTOR = 0.2;
 const SCAN_CONCURRENCY = 6;
 const MAX_SIGNAL_EVENTS = 50;
 
@@ -15,11 +15,11 @@ function previousUtcDayKey() {
 }
 
 function cacheKey(marketQuery) {
-  return `quota:dailyLevels:v2:${marketQuery.exchange}:${marketQuery.market}:${previousUtcDayKey()}`;
+  return `quota:dailyLevels:v3:${marketQuery.exchange}:${marketQuery.market}:${previousUtcDayKey()}`;
 }
 
 function eventsCacheKey(marketQuery) {
-  return `quota:signalEvents:v3:${marketQuery.exchange}:${marketQuery.market}`;
+  return `quota:signalEvents:v4:${marketQuery.exchange}:${marketQuery.market}`;
 }
 
 function brokenCacheKey(marketQuery) {
@@ -90,13 +90,21 @@ function dailyLevels(candles) {
     .filter((candle) => Number(candle.time) < todayStartSec)
     .sort((a, b) => Number(b.time) - Number(a.time))[0];
   const high = Number(previous?.high);
-  if (!Number.isFinite(high) || high <= 0) return null;
+  const low = Number(previous?.low);
+  if (
+    !Number.isFinite(high) ||
+    !Number.isFinite(low) ||
+    high <= 0 ||
+    low <= 0 ||
+    high <= low
+  ) return null;
   const today = (candles || []).find(
     (candle) => Number(candle.time) >= todayStartSec,
   );
   const todayHigh = Number(today?.high);
   return {
     previousHigh: high,
+    previousLow: low,
     todayHigh: Number.isFinite(todayHigh) ? todayHigh : 0,
   };
 }
@@ -241,11 +249,24 @@ export default function SignalsPage() {
     for (const row of availableRows) {
       const levels = highs.get(row.symbol);
       const previousHigh = levels?.previousHigh;
-      if (!Number.isFinite(previousHigh) || previousHigh <= 0) continue;
+      const previousLow = levels?.previousLow;
+      if (
+        !Number.isFinite(previousHigh) ||
+        !Number.isFinite(previousLow) ||
+        previousHigh <= previousLow
+      ) continue;
       if (brokenSymbols.has(row.symbol)) continue;
+      const previousRangePct = ((previousHigh - previousLow) / previousLow) * 100;
+      const triggerDistancePct = previousRangePct * RANGE_FACTOR;
       const distancePct = ((previousHigh - row.lastPrice) / previousHigh) * 100;
-      if (distancePct < 0 || distancePct > THRESHOLD_PCT) continue;
-      matches.push({ ...row, previousHigh, distancePct });
+      if (distancePct < 0 || distancePct > triggerDistancePct) continue;
+      matches.push({
+        ...row,
+        previousHigh,
+        previousRangePct,
+        triggerDistancePct,
+        distancePct,
+      });
     }
     return matches.sort((a, b) => a.distancePct - b.distancePct);
   }, [availableRows, highs, brokenSymbols]);
@@ -279,6 +300,8 @@ export default function SignalsPage() {
         triggerPrice: signal.lastPrice,
         previousHigh: signal.previousHigh,
         distancePct: signal.distancePct,
+        previousRangePct: signal.previousRangePct,
+        triggerDistancePct: signal.triggerDistancePct,
         triggeredAt,
       }));
       const next = [...additions, ...existing].slice(0, MAX_SIGNAL_EVENTS);
@@ -315,7 +338,7 @@ export default function SignalsPage() {
         <div className="signals-panel-head">
           <div>
             <h3 id="previous-high-signal">{t("signals.previousHighTitle")}</h3>
-            <p>{t("signals.previousHighRule", { pct: THRESHOLD_PCT })}</p>
+            <p>{t("signals.previousHighRule", { factor: RANGE_FACTOR * 100 })}</p>
           </div>
           <span className="signals-count">{signalEvents.length}/{MAX_SIGNAL_EVENTS}</span>
         </div>
@@ -333,14 +356,16 @@ export default function SignalsPage() {
                 <th>{t("signals.symbol")}</th>
                 <th>{t("signals.currentPrice")}</th>
                 <th>{t("signals.previousHigh")}</th>
+                <th>{t("signals.previousRange")}</th>
                 <th>{t("signals.distance")}</th>
+                <th>{t("signals.dynamicThreshold")}</th>
                 <th>{t("signals.triggeredAt")}</th>
               </tr>
             </thead>
             <tbody>
               {signalEvents.length === 0 && (
                 <tr>
-                  <td className="signals-empty" colSpan={5}>
+                  <td className="signals-empty" colSpan={7}>
                     {scanning ? t("signals.waiting") : t("signals.empty")}
                   </td>
                 </tr>
@@ -350,7 +375,9 @@ export default function SignalsPage() {
                   <td className="signals-symbol">{signal.symbol}</td>
                   <td>{formatPrice(signal.triggerPrice)}</td>
                   <td>{formatPrice(signal.previousHigh)}</td>
+                  <td>{signal.previousRangePct.toFixed(2)}%</td>
                   <td className="signals-distance">{signal.distancePct.toFixed(2)}%</td>
+                  <td>{signal.triggerDistancePct.toFixed(2)}%</td>
                   <td>{formatSignalTime(signal.triggeredAt)}</td>
                 </tr>
               ))}
