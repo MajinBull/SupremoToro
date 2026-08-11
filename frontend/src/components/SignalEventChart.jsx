@@ -6,6 +6,7 @@ import { useI18n } from "../i18n/I18nContext.jsx";
 
 const SIGNAL_CHART_INTERVAL = "15";
 const SIGNAL_CHART_BARS = 192;
+const SIGNAL_CHART_RIGHT_OFFSET = 8;
 
 function nearestCandleTime(candles, triggeredAt) {
   const target = Date.parse(triggeredAt) / 1000;
@@ -52,6 +53,7 @@ export default function SignalEventChart({ signal, marketQuery }) {
     if (!active || !chartContainerRef.current) return undefined;
     const element = chartContainerRef.current;
     let cancelled = false;
+    let rightOffsetFrame = 0;
 
     const chart = createChart(element, {
       layout: {
@@ -146,6 +148,12 @@ export default function SignalEventChart({ signal, marketQuery }) {
           }]);
         }
         chart.timeScale().fitContent();
+        chart.timeScale().applyOptions({ rightOffset: SIGNAL_CHART_RIGHT_OFFSET });
+        rightOffsetFrame = requestAnimationFrame(() => {
+          if (!cancelled) {
+            chart.timeScale().applyOptions({ rightOffset: SIGNAL_CHART_RIGHT_OFFSET });
+          }
+        });
         setStatus("ready");
       } catch {
         if (!cancelled) setStatus("error");
@@ -155,6 +163,7 @@ export default function SignalEventChart({ signal, marketQuery }) {
     load();
     return () => {
       cancelled = true;
+      cancelAnimationFrame(rightOffsetFrame);
       resizeObserver.disconnect();
       chart.remove();
     };
