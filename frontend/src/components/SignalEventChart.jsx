@@ -4,11 +4,23 @@ import { fetchKlines } from "../api.js";
 import { priceFormatForCandles } from "../chartKlineUpdate.js";
 import { useI18n } from "../i18n/I18nContext.jsx";
 
-const SIGNAL_CHART_INTERVAL = "15";
-const SIGNAL_CHART_BARS = 192;
-const SIGNAL_CHART_RIGHT_OFFSET = 8;
+const SIGNAL_CHART_RIGHT_OFFSET = 12;
+const SIGNAL_CHART_BARS = {
+  "1": 500,
+  "5": 500,
+  "30": 320,
+  "60": 240,
+  "240": 180,
+  D: 90,
+};
 
-function nearestCandleTime(candles, triggeredAt) {
+function intervalSeconds(interval) {
+  if (interval === "D") return 86400;
+  const minutes = Number(interval);
+  return Number.isFinite(minutes) && minutes > 0 ? minutes * 60 : 900;
+}
+
+function nearestCandleTime(candles, triggeredAt, interval) {
   const target = Date.parse(triggeredAt) / 1000;
   if (!Number.isFinite(target) || candles.length === 0) return null;
   let nearest = candles[0];
@@ -19,10 +31,13 @@ function nearestCandleTime(candles, triggeredAt) {
   }
   const first = candles[0].time;
   const last = candles[candles.length - 1].time;
-  return target >= first - 900 && target <= last + 900 ? nearest.time : null;
+  const tolerance = intervalSeconds(interval);
+  return target >= first - tolerance && target < last + tolerance
+    ? nearest.time
+    : null;
 }
 
-export default function SignalEventChart({ signal, marketQuery }) {
+export default function SignalEventChart({ signal, marketQuery, interval }) {
   const { t } = useI18n();
   const lazyRef = useRef(null);
   const chartContainerRef = useRef(null);
@@ -123,8 +138,8 @@ export default function SignalEventChart({ signal, marketQuery }) {
       try {
         const { candles = [] } = await fetchKlines(
           signal.symbol,
-          SIGNAL_CHART_INTERVAL,
-          { ...marketQuery, limit: SIGNAL_CHART_BARS },
+          interval,
+          { ...marketQuery, limit: SIGNAL_CHART_BARS[interval] ?? 320 },
         );
         if (cancelled) return;
         const data = candles.map((candle) => ({
@@ -137,7 +152,7 @@ export default function SignalEventChart({ signal, marketQuery }) {
         if (data.length === 0) throw new Error("No candles");
         series.applyOptions({ priceFormat: priceFormatForCandles(data) });
         series.setData(data);
-        const markerTime = nearestCandleTime(data, signal.triggeredAt);
+        const markerTime = nearestCandleTime(data, signal.triggeredAt, interval);
         if (markerTime != null) {
           series.setMarkers([{
             time: markerTime,
@@ -167,7 +182,7 @@ export default function SignalEventChart({ signal, marketQuery }) {
       resizeObserver.disconnect();
       chart.remove();
     };
-  }, [active, marketQuery.exchange, marketQuery.market, signal, t]);
+  }, [active, interval, marketQuery.exchange, marketQuery.market, signal, t]);
 
   return (
     <div

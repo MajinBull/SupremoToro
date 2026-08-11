@@ -7,6 +7,26 @@ import { useTickers } from "../TickerContext.jsx";
 const RANGE_FACTOR = 0.2;
 const SCAN_CONCURRENCY = 6;
 const MAX_SIGNAL_EVENTS = 50;
+const SIGNAL_CHART_INTERVAL_KEY = "quota:signalsChartInterval";
+const SIGNAL_CHART_TIMEFRAMES = [
+  { value: "1", label: "1m" },
+  { value: "5", label: "5m" },
+  { value: "30", label: "30m" },
+  { value: "60", label: "1h" },
+  { value: "240", label: "4h" },
+  { value: "D", label: "1d" },
+];
+
+function loadSignalChartInterval() {
+  try {
+    const stored = localStorage.getItem(SIGNAL_CHART_INTERVAL_KEY);
+    return SIGNAL_CHART_TIMEFRAMES.some((timeframe) => timeframe.value === stored)
+      ? stored
+      : "30";
+  } catch {
+    return "30";
+  }
+}
 
 function previousUtcDayKey() {
   const now = new Date();
@@ -142,10 +162,19 @@ export default function SignalsPage() {
   const [scanning, setScanning] = useState(false);
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [signalEvents, setSignalEvents] = useState([]);
+  const [signalChartInterval, setSignalChartInterval] = useState(loadSignalChartInterval);
   const [brokenSymbols, setBrokenSymbols] = useState(() => new Set());
   const scanIdRef = useRef(0);
   const activeSignalsRef = useRef(new Set());
   const eventsInitializedRef = useRef(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SIGNAL_CHART_INTERVAL_KEY, signalChartInterval);
+    } catch {
+      /* ignore storage errors */
+    }
+  }, [signalChartInterval]);
 
   useEffect(() => {
     setSignalEvents(loadSignalEvents(eventsCacheKey(marketQuery)));
@@ -330,9 +359,32 @@ export default function SignalsPage() {
             {marketQuery.market === "spot" ? t("layout.spot") : t("layout.derivatives")}
           </p>
         </div>
-        <button type="button" className="signals-refresh" onClick={refreshScan} disabled={scanning}>
-          {t("signals.refresh")}
-        </button>
+        <div className="signals-toolbar-actions">
+          <div
+            className="signals-timeframes"
+            role="group"
+            aria-label={t("charts.timeframe")}
+          >
+            {SIGNAL_CHART_TIMEFRAMES.map((timeframe) => (
+              <button
+                key={timeframe.value}
+                type="button"
+                className={`signals-timeframe${
+                  signalChartInterval === timeframe.value
+                    ? " signals-timeframe--active"
+                    : ""
+                }`}
+                onClick={() => setSignalChartInterval(timeframe.value)}
+                aria-pressed={signalChartInterval === timeframe.value}
+              >
+                {timeframe.label}
+              </button>
+            ))}
+          </div>
+          <button type="button" className="signals-refresh" onClick={refreshScan} disabled={scanning}>
+            {t("signals.refresh")}
+          </button>
+        </div>
       </div>
 
       <section className="signals-panel" aria-labelledby="previous-high-signal">
@@ -388,7 +440,11 @@ export default function SignalsPage() {
                   </div>
                 </dl>
               </div>
-              <SignalEventChart signal={signal} marketQuery={marketQuery} />
+              <SignalEventChart
+                signal={signal}
+                marketQuery={marketQuery}
+                interval={signalChartInterval}
+              />
             </article>
           ))}
         </div>
