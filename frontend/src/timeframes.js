@@ -3,6 +3,7 @@ export const TIMEFRAMES = [
   { label: "1m", api: "1" },
   { label: "5m", api: "5" },
   { label: "15m", api: "15" },
+  { label: "30m", api: "30" },
   { label: "1h", api: "60" },
   { label: "4h", api: "240" },
   { label: "1d", api: "D" },
