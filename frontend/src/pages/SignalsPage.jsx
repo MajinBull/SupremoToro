@@ -5,6 +5,7 @@ import { useTickers } from "../TickerContext.jsx";
 
 const THRESHOLD_PCT = 5;
 const SCAN_CONCURRENCY = 6;
+const MAX_SIGNAL_EVENTS = 50;
 
 function previousUtcDayKey() {
   const now = new Date();
@@ -15,6 +16,27 @@ function previousUtcDayKey() {
 
 function cacheKey(marketQuery) {
   return `quota:previousHigh:v1:${marketQuery.exchange}:${marketQuery.market}:${previousUtcDayKey()}`;
+}
+
+function eventsCacheKey(marketQuery) {
+  return `quota:signalEvents:v1:${marketQuery.exchange}:${marketQuery.market}`;
+}
+
+function loadSignalEvents(key) {
+  try {
+    const value = JSON.parse(localStorage.getItem(key) || "[]");
+    return Array.isArray(value) ? value.slice(0, MAX_SIGNAL_EVENTS) : [];
+  } catch {
+    return [];
+  }
+}
+
+function saveSignalEvents(key, events) {
+  try {
+    localStorage.setItem(key, JSON.stringify(events.slice(0, MAX_SIGNAL_EVENTS)));
+  } catch {
+    /* ignore storage errors */
+  }
 }
 
 function loadCachedHighs(key) {
@@ -57,6 +79,13 @@ function formatPrice(value) {
   }).format(value);
 }
 
+function formatSignalTime(value) {
+  return new Date(value).toLocaleString(undefined, {
+    dateStyle: "short",
+    timeStyle: "medium",
+  });
+}
+
 export default function SignalsPage() {
   const { t } = useI18n();
   const { rows, marketQuery } = useTickers();
@@ -70,14 +99,25 @@ export default function SignalsPage() {
     [availableRows],
   );
   const [highs, setHighs] = useState(() => new Map());
+  const [highsMarketKey, setHighsMarketKey] = useState(null);
   const [progress, setProgress] = useState({ done: 0, total: 0, failed: 0 });
   const [scanning, setScanning] = useState(false);
   const [refreshVersion, setRefreshVersion] = useState(0);
+  const [signalEvents, setSignalEvents] = useState([]);
   const scanIdRef = useRef(0);
+  const activeSignalsRef = useRef(new Set());
+  const eventsInitializedRef = useRef(false);
+
+  useEffect(() => {
+    setSignalEvents(loadSignalEvents(eventsCacheKey(marketQuery)));
+    activeSignalsRef.current = new Set();
+    eventsInitializedRef.current = false;
+  }, [marketKey, marketQuery]);
 
   useEffect(() => {
     if (!symbolSignature) {
       setHighs(new Map());
+      setHighsMarketKey(null);
       setProgress({ done: 0, total: 0, failed: 0 });
       return undefined;
     }
@@ -88,6 +128,7 @@ export default function SignalsPage() {
     const symbols = symbolSignature.split(",");
     const missing = symbols.filter((symbol) => !cached.has(symbol));
     setHighs(new Map(cached));
+    setHighsMarketKey(marketKey);
     setProgress({ done: symbols.length - missing.length, total: symbols.length, failed: 0 });
     if (missing.length === 0) {
       setScanning(false);
@@ -134,7 +175,7 @@ export default function SignalsPage() {
     };
   }, [marketKey, marketQuery, symbolSignature, refreshVersion]);
 
-  const signals = useMemo(() => {
+  const matchingSignals = useMemo(() => {
     const matches = [];
     for (const row of availableRows) {
       const previousHigh = highs.get(row.symbol);
@@ -145,6 +186,57 @@ export default function SignalsPage() {
     }
     return matches.sort((a, b) => a.distancePct - b.distancePct);
   }, [availableRows, highs]);
+
+  useEffect(() => {
+    if (
+      scanning ||
+      highsMarketKey !== marketKey ||
+      progress.total === 0 ||
+      progress.done < progress.total
+    ) return;
+    const currentSymbols = new Set(matchingSignals.map((signal) => signal.symbol));
+
+    if (!eventsInitializedRef.current) {
+      eventsInitializedRef.current = true;
+      activeSignalsRef.current = currentSymbols;
+      setSignalEvents((existing) => {
+        if (existing.length > 0) return existing;
+        const triggeredAt = new Date().toISOString();
+        const initial = matchingSignals.slice(0, MAX_SIGNAL_EVENTS).map((signal, index) => ({
+          id: `${triggeredAt}:${signal.symbol}:${index}`,
+          symbol: signal.symbol,
+          triggerPrice: signal.lastPrice,
+          previousHigh: signal.previousHigh,
+          distancePct: signal.distancePct,
+          triggeredAt,
+        }));
+        saveSignalEvents(eventsCacheKey(marketQuery), initial);
+        return initial;
+      });
+      return;
+    }
+
+    const entered = matchingSignals.filter(
+      (signal) => !activeSignalsRef.current.has(signal.symbol),
+    );
+    activeSignalsRef.current = currentSymbols;
+    if (entered.length === 0) return;
+
+    const triggeredAt = new Date().toISOString();
+    setSignalEvents((existing) => {
+      const additions = entered.map((signal, index) => ({
+        id: `${triggeredAt}:${signal.symbol}:${index}`,
+        symbol: signal.symbol,
+        triggerPrice: signal.lastPrice,
+        previousHigh: signal.previousHigh,
+        distancePct: signal.distancePct,
+        triggeredAt,
+      }));
+      const next = [...additions, ...existing].slice(0, MAX_SIGNAL_EVENTS);
+      saveSignalEvents(eventsCacheKey(marketQuery), next);
+      return next;
+    });
+  }, [matchingSignals, scanning, highsMarketKey, marketKey, progress, marketQuery]);
 
   function refreshScan() {
     try {
@@ -176,7 +268,7 @@ export default function SignalsPage() {
             <h3 id="previous-high-signal">{t("signals.previousHighTitle")}</h3>
             <p>{t("signals.previousHighRule", { pct: THRESHOLD_PCT })}</p>
           </div>
-          <span className="signals-count">{signals.length}</span>
+          <span className="signals-count">{signalEvents.length}/{MAX_SIGNAL_EVENTS}</span>
         </div>
 
         <div className="signals-progress" aria-live="polite">
@@ -193,22 +285,24 @@ export default function SignalsPage() {
                 <th>{t("signals.currentPrice")}</th>
                 <th>{t("signals.previousHigh")}</th>
                 <th>{t("signals.distance")}</th>
+                <th>{t("signals.triggeredAt")}</th>
               </tr>
             </thead>
             <tbody>
-              {signals.length === 0 && (
+              {signalEvents.length === 0 && (
                 <tr>
-                  <td className="signals-empty" colSpan={4}>
+                  <td className="signals-empty" colSpan={5}>
                     {scanning ? t("signals.waiting") : t("signals.empty")}
                   </td>
                 </tr>
               )}
-              {signals.map((signal) => (
-                <tr key={signal.symbol}>
+              {signalEvents.map((signal) => (
+                <tr key={signal.id}>
                   <td className="signals-symbol">{signal.symbol}</td>
-                  <td>{formatPrice(signal.lastPrice)}</td>
+                  <td>{formatPrice(signal.triggerPrice)}</td>
                   <td>{formatPrice(signal.previousHigh)}</td>
                   <td className="signals-distance">{signal.distancePct.toFixed(2)}%</td>
+                  <td>{formatSignalTime(signal.triggeredAt)}</td>
                 </tr>
               ))}
             </tbody>
