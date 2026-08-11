@@ -4,7 +4,7 @@ import { fetchKlines } from "../api.js";
 import { priceFormatForCandles } from "../chartKlineUpdate.js";
 import { useI18n } from "../i18n/I18nContext.jsx";
 
-const SIGNAL_CHART_RIGHT_OFFSET = 12;
+const SIGNAL_CHART_RIGHT_OFFSET = 48;
 const SIGNAL_CHART_BARS = {
   "1": 500,
   "5": 500,
