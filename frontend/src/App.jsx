@@ -8,6 +8,7 @@ import { TickerProvider } from "./TickerContext.jsx";
 import Layout from "./components/Layout.jsx";
 import DashboardPage from "./pages/DashboardPage.jsx";
 import ListingsPage from "./pages/ListingsPage.jsx";
+import SignalsPage from "./pages/SignalsPage.jsx";
 
 /** La pagina grafici è montata in Layout (keep-alive) così stato e filtri restano al cambio sezione. */
 function ChartsRoutePlaceholder() {
@@ -27,6 +28,7 @@ export default function App() {
                   <Route element={<Layout />}>
                     <Route index element={<DashboardPage />} />
                     <Route path="listings" element={<ListingsPage />} />
+                    <Route path="signals" element={<SignalsPage />} />
                     <Route path="charts" element={<ChartsRoutePlaceholder />} />
                     <Route path="*" element={<Navigate to="/" replace />} />
                   </Route>

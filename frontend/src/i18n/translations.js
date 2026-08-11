@@ -10,6 +10,7 @@ export const TRANSLATIONS = {
       dashboard: "Dashboard",
       listings: "Listati / delist",
       charts: "Grafici multipli",
+      signals: "Segnali",
       game: "Game",
     },
     auth: {
@@ -95,6 +96,21 @@ export const TRANSLATIONS = {
       emptyRecent: "Nessun annuncio di listing negli ultimi 14 giorni.",
       emptyDelisted: "Nessun annuncio di delisting negli ultimi 14 giorni.",
       marketContext: "Mercato selezionato nel menu: {exchange} · {segment}",
+    },
+    signals: {
+      title: "Segnali",
+      refresh: "Aggiorna analisi",
+      previousHighTitle: "Avvicinamento al massimo precedente",
+      previousHighRule:
+        "Prezzo ancora sotto il massimo del giorno precedente, con distanza massima del {pct}%.",
+      scanning: "Analisi {done} di {total} simboli...",
+      scanned: "Analizzati {done} simboli · {failed} non disponibili",
+      symbol: "Simbolo",
+      currentPrice: "Prezzo attuale",
+      previousHigh: "Massimo precedente",
+      distance: "Distanza",
+      waiting: "I segnali appariranno progressivamente durante l'analisi.",
+      empty: "Nessun simbolo si trova entro il 5% dal massimo precedente.",
     },
     charts: {
       grid: "Griglia",
@@ -199,6 +215,9 @@ export const TRANSLATIONS = {
       chartsTitle: "Grafici multipli Bybit — Quota",
       chartsDesc:
         "Griglia di grafici candlestick per perpetual USDT su Bybit, timeframe selezionabili.",
+      signalsTitle: "Segnali di mercato — Quota",
+      signalsDesc:
+        "Segnali tecnici sul mercato selezionato, incluso l'avvicinamento al massimo del giorno precedente.",
       gameTitle: "Game — missioni e badge — Quota",
       gameDesc:
         "Check-in giornaliero, missioni e badge salvati in locale sul dispositivo.",
@@ -405,6 +424,7 @@ export const TRANSLATIONS = {
       dashboard: "Dashboard",
       listings: "Listed / delisted",
       charts: "Multiple charts",
+      signals: "Signals",
       game: "Game",
     },
     auth: {
@@ -488,6 +508,21 @@ export const TRANSLATIONS = {
       emptyRecent: "No listing announcements in the last 14 days.",
       emptyDelisted: "No delisting announcements in the last 14 days.",
       marketContext: "Market selected in the menu: {exchange} · {segment}",
+    },
+    signals: {
+      title: "Signals",
+      refresh: "Refresh analysis",
+      previousHighTitle: "Approaching the previous high",
+      previousHighRule:
+        "Price remains below the previous day's high and is no more than {pct}% away.",
+      scanning: "Scanning {done} of {total} symbols...",
+      scanned: "Scanned {done} symbols · {failed} unavailable",
+      symbol: "Symbol",
+      currentPrice: "Current price",
+      previousHigh: "Previous high",
+      distance: "Distance",
+      waiting: "Signals will appear progressively during the scan.",
+      empty: "No symbols are within 5% of the previous high.",
     },
     charts: {
       grid: "Grid",
@@ -590,6 +625,9 @@ export const TRANSLATIONS = {
       chartsTitle: "Multiple Bybit charts — Quota",
       chartsDesc:
         "Grid of candlestick charts for Bybit USDT perpetuals, selectable timeframes.",
+      signalsTitle: "Market signals — Quota",
+      signalsDesc:
+        "Technical signals for the selected market, including proximity to the previous day's high.",
       gameTitle: "Game — missions & badges — Quota",
       gameDesc:
         "Daily check-in, missions, and badges stored locally on your device.",

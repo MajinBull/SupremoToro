@@ -253,6 +253,14 @@ export default function Layout() {
             >
               {t("nav.charts")}
             </NavLink>
+            <NavLink
+              to="/signals"
+              className={({ isActive }) =>
+                `nav-link${isActive ? " nav-link-active" : ""}`
+              }
+            >
+              {t("nav.signals")}
+            </NavLink>
           </nav>
         </div>
       </header>
@@ -303,6 +311,14 @@ export default function Layout() {
             }
           >
             {t("nav.charts")}
+          </NavLink>
+          <NavLink
+            to="/signals"
+            className={({ isActive }) =>
+              `app-side-menu-link${isActive ? " app-side-menu-link--active" : ""}`
+            }
+          >
+            {t("nav.signals")}
           </NavLink>
         </nav>
         <div

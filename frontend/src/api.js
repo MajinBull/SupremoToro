@@ -66,8 +66,7 @@ function parseBybitKlineBody(body, symbol, interval) {
 }
 
 /** Fallback: proxy CORS (IP del proxy; può fallire se anche lì Bybit blocca). */
-async function fetchKlinesViaAllOrigins(symbol, interval) {
-  const limit = 500;
+async function fetchKlinesViaAllOrigins(symbol, interval, limit = 500) {
   const q = new URLSearchParams({
     category: "linear",
     symbol: symbol.toUpperCase(),
@@ -90,10 +89,11 @@ async function fetchKlinesViaAllOrigins(symbol, interval) {
 export async function fetchKlines(symbol, interval, options = {}) {
   const exchange = options.exchange ?? "bybit";
   const market = options.market ?? "derivatives";
+  const limit = Math.min(Math.max(Number(options.limit) || 500, 1), 500);
   const q = new URLSearchParams({
     symbol,
     interval,
-    limit: "500",
+    limit: String(limit),
     exchange,
     market,
   });
@@ -111,7 +111,7 @@ export async function fetchKlines(symbol, interval, options = {}) {
   } catch (e) {
     if (exchange === "bybit" && market === "derivatives") {
       try {
-        return await fetchKlinesViaAllOrigins(symbol, interval);
+        return await fetchKlinesViaAllOrigins(symbol, interval, limit);
       } catch {
         throw e;
       }
