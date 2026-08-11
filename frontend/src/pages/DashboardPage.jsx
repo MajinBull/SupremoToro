@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { useGame } from "../GameContext.jsx";
 import { useFavorites } from "../FavoritesContext.jsx";
 import { useTickers } from "../TickerContext.jsx";
 import CryptoTable from "../components/CryptoTable.jsx";
@@ -26,7 +25,6 @@ export default function DashboardPage() {
   const { t } = useI18n();
   const { rows, tickerError } = useTickers();
   const { favorites } = useFavorites();
-  const { recordDashboardChartOpen } = useGame();
 
   const [search, setSearch] = useState("");
   const [minVolFilter, setMinVolFilter] = useState("any");
@@ -67,7 +65,6 @@ export default function DashboardPage() {
   const openChart = (symbol) => {
     setSelectedSymbol(symbol);
     setPanelOpen(true);
-    recordDashboardChartOpen();
   };
 
   const countExtra =

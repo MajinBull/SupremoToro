@@ -4,6 +4,7 @@ import {
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { fetchPerpetuals, fetchTickers } from "./api.js";
@@ -23,6 +24,9 @@ const TickerContext = createContext(null);
 
 export function TickerProvider({ children }) {
   const { marketQuery } = useMarket();
+  const marketKey = `${marketQuery.exchange}:${marketQuery.market}`;
+  const currentMarketKeyRef = useRef(marketKey);
+  currentMarketKeyRef.current = marketKey;
   const [rows, setRows] = useState([]);
   const [symbolList, setSymbolList] = useState([]);
   const [symbolCount, setSymbolCount] = useState(0);
@@ -39,13 +43,16 @@ export function TickerProvider({ children }) {
     marketQuery.exchange === "bybit" && marketQuery.market === "derivatives";
 
   const loadTickers = useCallback(async () => {
+    const requestMarketKey = `${marketQuery.exchange}:${marketQuery.market}`;
     try {
       const data = await fetchTickers(marketQuery);
+      if (currentMarketKeyRef.current !== requestMarketKey) return;
       setRows(data.rows || []);
       setLastTickerAt(data.updatedAt || new Date().toISOString());
       setTickerError(null);
       setUseWsTickers(false);
     } catch {
+      if (currentMarketKeyRef.current !== requestMarketKey) return;
       setTickerError(null);
       setUseWsTickers(allowsBybitLinearWsFallback);
       if (!allowsBybitLinearWsFallback) {
@@ -55,8 +62,10 @@ export function TickerProvider({ children }) {
   }, [marketQuery, allowsBybitLinearWsFallback]);
 
   const loadSymbolMeta = useCallback(async () => {
+    const requestMarketKey = `${marketQuery.exchange}:${marketQuery.market}`;
     try {
       const meta = await fetchPerpetuals(marketQuery);
+      if (currentMarketKeyRef.current !== requestMarketKey) return;
       const list = meta.symbols || [];
       setSymbolList((prev) => {
         if (
@@ -75,12 +84,20 @@ export function TickerProvider({ children }) {
       setLastSymbolsAt(meta.lastUpdated || null);
       setSymbolsError(meta.lastError || null);
     } catch (e) {
+      if (currentMarketKeyRef.current !== requestMarketKey) return;
       setSymbolsError(e.message || SYMBOLS_ERROR_FALLBACK);
     }
   }, [marketQuery]);
 
   useEffect(() => {
     setUseWsTickers(false);
+    setRows([]);
+    setSymbolList([]);
+    setSymbolCount(0);
+    setRecentListings([]);
+    setDelisted([]);
+    setTickerError(null);
+    setSymbolsError(null);
   }, [marketQuery.exchange, marketQuery.market]);
 
   useEffect(() => {

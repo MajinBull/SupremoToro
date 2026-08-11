@@ -250,11 +250,17 @@ export default function MultiChartsPage() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [chartsTopOpen, isMobileCharts, setChartsTopOpen]);
-  const { rows } = useTickers();
+  const { rows, marketQuery } = useTickers();
   const { favorites } = useFavorites();
 
   /** Evita griglia vuota e remount se un poll ticker fallisce o ritarda (mantiene ultimo snapshot valido). */
   const lastRowsRef = useRef([]);
+  const lastMarketRef = useRef("");
+  const currentMarketKey = `${marketQuery.exchange}:${marketQuery.market}`;
+  if (lastMarketRef.current !== currentMarketKey) {
+    lastMarketRef.current = currentMarketKey;
+    lastRowsRef.current = [];
+  }
   if (rows.length > 0) {
     lastRowsRef.current = rows;
   }

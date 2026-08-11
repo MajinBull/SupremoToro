@@ -5,10 +5,12 @@ import { SYMBOL_REFRESH_MS } from "./config.js";
 import {
   fetchTradingUsdtLinearPerpetualDetails,
   fetchTradingUsdtSpotDetails,
+  fetchRecentlyClosedUsdtLinearPerpetuals,
 } from "./bybit.js";
 import {
   fetchBinanceSpotUsdtInstrumentDetails,
   fetchBinanceUsdtPerpetualInstrumentDetails,
+  fetchRecentlyClosedBinanceUsdtPerpetuals,
 } from "./binanceApi.js";
 import { onTradingListRefreshed, getDelistedList } from "./listingTracker.js";
 import { MARKET_KEYS, listMarketKeys } from "./marketKey.js";
@@ -28,6 +30,11 @@ const FETCH_DETAILS = {
   [MARKET_KEYS.BYBIT_SPOT]: fetchTradingUsdtSpotDetails,
   [MARKET_KEYS.BINANCE_SPOT]: fetchBinanceSpotUsdtInstrumentDetails,
   [MARKET_KEYS.BINANCE_FUTURES]: fetchBinanceUsdtPerpetualInstrumentDetails,
+};
+
+const FETCH_DELISTED = {
+  [MARKET_KEYS.BYBIT_LINEAR]: fetchRecentlyClosedUsdtLinearPerpetuals,
+  [MARKET_KEYS.BINANCE_FUTURES]: fetchRecentlyClosedBinanceUsdtPerpetuals,
 };
 
 function loadSnapshotSymbols() {
@@ -63,6 +70,7 @@ function emptyState() {
     lastUpdated: null,
     lastError: null,
     lastSuccessAt: 0,
+    detectedDelisted: [],
   };
 }
 
@@ -78,7 +86,13 @@ function getCache(marketKey) {
 
 export function getSymbolCacheState(marketKey = MARKET_KEYS.BYBIT_LINEAR) {
   const c = getCache(marketKey);
-  const delisted = getDelistedList(marketKey);
+  const trackedDelisted = getDelistedList(marketKey);
+  const bySymbol = new Map(
+    [...trackedDelisted, ...c.detectedDelisted].map((item) => [item.symbol, item]),
+  );
+  const delisted = [...bySymbol.values()].sort((a, b) =>
+    a.symbol.localeCompare(b.symbol),
+  );
   return {
     symbols: [...c.symbols],
     lastUpdated: c.lastUpdated,
@@ -120,6 +134,24 @@ export async function refreshInstruments(marketKey = MARKET_KEYS.BYBIT_LINEAR) {
       details.map((d) => [d.symbol, d.launchTimeMs]),
     );
     onTradingListRefreshed(marketKey, previous, c.symbols);
+    const delistedFetcher = FETCH_DELISTED[marketKey];
+    if (delistedFetcher) {
+      try {
+        const cutoff = Date.now() - RECENT_BY_LAUNCH_MS;
+        const detected = await delistedFetcher();
+        c.detectedDelisted = detected
+          .filter((item) => item.delistedAtMs >= cutoff && item.delistedAtMs <= Date.now())
+          .map((item) => ({
+            symbol: item.symbol,
+            delistedAt: new Date(item.delistedAtMs).toISOString(),
+            visibleUntil: new Date(item.delistedAtMs + RECENT_BY_LAUNCH_MS).toISOString(),
+          }));
+      } catch (e) {
+        console.warn(`[instrumentCache] delisted (${marketKey}):`, e.message);
+      }
+    } else {
+      c.detectedDelisted = [];
+    }
     c.lastUpdated = new Date().toISOString();
     c.lastError = null;
     c.lastSuccessAt = Date.now();

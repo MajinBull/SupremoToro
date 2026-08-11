@@ -13,7 +13,6 @@ function siteBase() {
 function routeSeoKey(pathname) {
   if (pathname === "/listings") return "listings";
   if (pathname === "/charts") return "charts";
-  if (pathname.startsWith("/game")) return "game";
   return "home";
 }
 
@@ -54,7 +53,7 @@ export default function SeoHead() {
         ? t("seo.listingsTitle")
         : seoKey === "charts"
           ? t("seo.chartsTitle")
-          : t("seo.gameTitle");
+          : t("seo.homeTitle");
   const description =
     seoKey === "home"
       ? t("seo.defaultDescription")
@@ -62,7 +61,7 @@ export default function SeoHead() {
         ? t("seo.listingsDesc")
         : seoKey === "charts"
           ? t("seo.chartsDesc")
-          : t("seo.gameDesc");
+          : t("seo.defaultDescription");
 
   useEffect(() => {
     document.title = title;

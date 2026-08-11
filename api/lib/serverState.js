@@ -1,16 +1,23 @@
 import {
   ensureInstrumentsFresh,
   refreshInstruments,
-  getSymbolCacheState,
-  getSymbolsSet,
+  getSymbolCacheState as getSymbolCacheStateForKey,
+  getSymbolsSet as getSymbolsSetForKey,
 } from "../../backend/src/instrumentCache.js";
+import { marketKeyFromQuery } from "../../backend/src/marketKey.js";
 
-export { getSymbolCacheState, getSymbolsSet };
-
-export async function ensureSymbolsLoaded() {
-  await ensureInstrumentsFresh();
+export function getSymbolCacheState(exchange, market) {
+  return getSymbolCacheStateForKey(marketKeyFromQuery(exchange, market));
 }
 
-export async function refreshSymbols() {
-  await refreshInstruments();
+export function getSymbolsSet(exchange, market) {
+  return getSymbolsSetForKey(marketKeyFromQuery(exchange, market));
+}
+
+export async function ensureSymbolsLoaded(exchange, market) {
+  await ensureInstrumentsFresh(marketKeyFromQuery(exchange, market));
+}
+
+export async function refreshSymbols(exchange, market) {
+  await refreshInstruments(marketKeyFromQuery(exchange, market));
 }

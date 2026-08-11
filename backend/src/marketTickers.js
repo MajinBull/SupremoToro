@@ -1,7 +1,6 @@
 import {
   fetchLinearTickers,
   fetchSpotTickers,
-  isUsdtLinearSymbol,
 } from "./bybit.js";
 import {
   fetchBinanceFuturesFundingMap,
@@ -71,10 +70,6 @@ function normalizeBinanceRow(sym, t, fundingRate) {
   };
 }
 
-function isLinearPerpTickerBybit(t) {
-  return isUsdtLinearSymbol(t?.symbol);
-}
-
 /**
  * Righe ticker allineate alla dashboard per ogni mercato.
  * @param {Set<string>} known
@@ -88,11 +83,6 @@ export async function fetchTickerRowsForMarket(marketKey, known) {
       for (const sym of known) {
         rows.push(normalizeBybitTickerRow(sym, bySymbol.get(sym)));
       }
-      for (const t of list) {
-        if (!known.has(t.symbol) && isLinearPerpTickerBybit(t)) {
-          rows.push(normalizeBybitTickerRow(t.symbol, t));
-        }
-      }
       rows.sort((a, b) => a.symbol.localeCompare(b.symbol));
       return rows;
     }
@@ -103,11 +93,6 @@ export async function fetchTickerRowsForMarket(marketKey, known) {
       for (const sym of known) {
         rows.push(normalizeBybitTickerRow(sym, bySymbol.get(sym)));
       }
-      for (const t of list) {
-        if (!known.has(t.symbol) && isUsdtLinearSymbol(t.symbol)) {
-          rows.push(normalizeBybitTickerRow(t.symbol, t));
-        }
-      }
       rows.sort((a, b) => a.symbol.localeCompare(b.symbol));
       return rows;
     }
@@ -117,11 +102,6 @@ export async function fetchTickerRowsForMarket(marketKey, known) {
       for (const sym of known) {
         const u = sym.toUpperCase();
         rows.push(normalizeBinanceRow(u, bySymbol.get(u), null));
-      }
-      for (const [s, t] of bySymbol) {
-        if (!known.has(s) && s.endsWith("USDT")) {
-          rows.push(normalizeBinanceRow(s, t, null));
-        }
       }
       rows.sort((a, b) => a.symbol.localeCompare(b.symbol));
       return rows;
@@ -137,13 +117,6 @@ export async function fetchTickerRowsForMarket(marketKey, known) {
         rows.push(
           normalizeBinanceRow(u, bySymbol.get(u), fundingMap.get(u) ?? null),
         );
-      }
-      for (const [s, t] of bySymbol) {
-        if (!known.has(s) && s.endsWith("USDT")) {
-          rows.push(
-            normalizeBinanceRow(s, t, fundingMap.get(s) ?? null),
-          );
-        }
       }
       rows.sort((a, b) => a.symbol.localeCompare(b.symbol));
       return rows;

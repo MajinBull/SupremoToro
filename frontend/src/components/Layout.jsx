@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Outlet, NavLink, useLocation } from "react-router-dom";
-import { useGame } from "../GameContext.jsx";
 import { LayoutChartsContext } from "../LayoutChartsContext.jsx";
 import { PriceAlertsTickerSync } from "../PriceAlertsContext.jsx";
 import MultiChartsPage from "../pages/MultiChartsPage.jsx";
@@ -85,11 +84,6 @@ export default function Layout() {
     );
   }
   const location = useLocation();
-  const {
-    recordListingsVisit,
-    recordChartsSectionVisit,
-  } = useGame();
-  const prevPathForGame = useRef(null);
   const isCharts = location.pathname === "/charts";
   const [chartsTopOpen, setChartsTopOpen] = useState(loadChartsTopOpen);
   const [chartsRotationPaused, setChartsRotationPaused] = useState(false);
@@ -121,21 +115,6 @@ export default function Layout() {
     setSideMenuOpen(false);
   }, [location.pathname]);
 
-  useEffect(() => {
-    const prev = prevPathForGame.current;
-    const path = location.pathname;
-    if (path === "/listings" && prev !== "/listings") {
-      recordListingsVisit();
-    }
-    if (path === "/charts" && prev !== "/charts") {
-      recordChartsSectionVisit();
-    }
-    prevPathForGame.current = path;
-  }, [
-    location.pathname,
-    recordListingsVisit,
-    recordChartsSectionVisit,
-  ]);
 
   const reportChartsRotationSchedule = useCallback((active) => {
     setChartsRotationScheduleActive(!!active);
@@ -274,14 +253,6 @@ export default function Layout() {
             >
               {t("nav.charts")}
             </NavLink>
-            <NavLink
-              to="/game/checkin"
-              className={() =>
-                `nav-link${location.pathname.startsWith("/game") ? " nav-link-active" : ""}`
-              }
-            >
-              {t("nav.game")}
-            </NavLink>
           </nav>
         </div>
       </header>
@@ -332,14 +303,6 @@ export default function Layout() {
             }
           >
             {t("nav.charts")}
-          </NavLink>
-          <NavLink
-            to="/game/checkin"
-            className={() =>
-              `app-side-menu-link${location.pathname.startsWith("/game") ? " app-side-menu-link--active" : ""}`
-            }
-          >
-            {t("nav.game")}
           </NavLink>
         </nav>
         <div
