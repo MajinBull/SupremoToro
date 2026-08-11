@@ -21,6 +21,7 @@ export async function fetchPerpetuals(params = {}) {
   const q = new URLSearchParams({ exchange, market });
   const res = await fetch(apiUrl(`/api/perpetuals?${q}`), {
     headers: JSON_HEADERS,
+    cache: "no-store",
   });
   if (!res.ok) throw new Error(`perpetuals ${res.status}`);
   return res.json();
@@ -31,7 +32,10 @@ export async function fetchTickers(params = {}) {
   const exchange = params.exchange ?? "bybit";
   const market = params.market ?? "derivatives";
   const q = new URLSearchParams({ exchange, market });
-  const res = await fetch(apiUrl(`/api/tickers?${q}`), { headers: JSON_HEADERS });
+  const res = await fetch(apiUrl(`/api/tickers?${q}`), {
+    headers: JSON_HEADERS,
+    cache: "no-store",
+  });
   const data = await res.json();
   if (!res.ok) {
     const msg = data.error || `tickers ${res.status}`;

@@ -4,6 +4,8 @@ import {
 } from "./lib/serverState.js";
 
 export default async function handler(req, res) {
+  res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate");
+  res.setHeader("Pragma", "no-cache");
   try {
     const { exchange = "bybit", market = "derivatives" } = req.query;
     await ensureSymbolsLoaded(exchange, market);
