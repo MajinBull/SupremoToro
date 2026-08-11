@@ -90,6 +90,7 @@ export default function Layout() {
   const [chartsRotationScheduleActive, setChartsRotationScheduleActive] =
     useState(false);
   const [chartsPageNav, setChartsPageNav] = useState(null);
+  const [chartsTimeframeControl, setChartsTimeframeControl] = useState(null);
   const [chartsEverVisited, setChartsEverVisited] = useState(
     () => location.pathname === "/charts"
   );
@@ -127,6 +128,7 @@ export default function Layout() {
       chartsRotationPaused,
       reportChartsRotationSchedule,
       registerChartsPageNav: setChartsPageNav,
+      registerChartsTimeframeControl: setChartsTimeframeControl,
     }),
     [
       chartsTopOpen,
@@ -162,20 +164,29 @@ export default function Layout() {
                     {t("layout.chartsPanelSr")}
                   </span>
                 </button>
-                {chartsRotationScheduleActive && (
-                  <button
-                    type="button"
-                    className={`charts-rotation-pause${chartsRotationPaused ? " charts-rotation-pause--active" : ""}`}
-                    onClick={() => setChartsRotationPaused((p) => !p)}
-                    aria-pressed={chartsRotationPaused}
-                    title={
-                      chartsRotationPaused
-                        ? t("layout.rotationResumeTitle")
-                        : t("layout.rotationPauseTitle")
-                    }
+                {chartsTimeframeControl && (
+                  <div
+                    className="charts-header-timeframes"
+                    role="group"
+                    aria-label={t("charts.timeframe")}
                   >
-                    {chartsRotationPaused ? t("layout.rotationResume") : t("layout.rotationPause")}
-                  </button>
+                    {chartsTimeframeControl.options.map((timeframe) => (
+                      <button
+                        key={timeframe.api}
+                        type="button"
+                        className={`charts-header-timeframe${
+                          chartsTimeframeControl.value === timeframe.api
+                            ? " charts-header-timeframe--active"
+                            : ""
+                        }`}
+                        onClick={() => chartsTimeframeControl.onChange(timeframe.api)}
+                        aria-pressed={chartsTimeframeControl.value === timeframe.api}
+                        aria-label={`${t("charts.timeframe")} ${timeframe.label}`}
+                      >
+                        {timeframe.label}
+                      </button>
+                    ))}
+                  </div>
                 )}
                 {chartsPageNav && (
                   <div
@@ -192,6 +203,26 @@ export default function Layout() {
                     >
                       ‹
                     </button>
+                    {chartsRotationScheduleActive && (
+                      <button
+                        type="button"
+                        className={`charts-rotation-pause${chartsRotationPaused ? " charts-rotation-pause--active" : ""}`}
+                        onClick={() => setChartsRotationPaused((p) => !p)}
+                        aria-pressed={chartsRotationPaused}
+                        aria-label={
+                          chartsRotationPaused
+                            ? t("layout.rotationResumeTitle")
+                            : t("layout.rotationPauseTitle")
+                        }
+                        title={
+                          chartsRotationPaused
+                            ? t("layout.rotationResumeTitle")
+                            : t("layout.rotationPauseTitle")
+                        }
+                      >
+                        {chartsRotationPaused ? "II" : "\u25b6"}
+                      </button>
+                    )}
                     <button
                       type="button"
                       className="charts-page-step"

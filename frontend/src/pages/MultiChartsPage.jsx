@@ -225,6 +225,7 @@ export default function MultiChartsPage() {
     chartsRotationPaused = false,
     reportChartsRotationSchedule,
     registerChartsPageNav,
+    registerChartsTimeframeControl,
   } = useLayoutChartsContext();
 
   const isMobileCharts = useSyncExternalStore(
@@ -530,6 +531,16 @@ export default function MultiChartsPage() {
   ]);
 
   useEffect(() => {
+    if (!registerChartsTimeframeControl) return undefined;
+    registerChartsTimeframeControl({
+      value: chartInterval,
+      options: TIMEFRAMES,
+      onChange: setChartInterval,
+    });
+    return () => registerChartsTimeframeControl(null);
+  }, [chartInterval, registerChartsTimeframeControl]);
+
+  useEffect(() => {
     if (!rotationIntervalActive || chartsRotationPaused) return undefined;
     const id = window.setInterval(() => {
       setPageIndex((i) => {
@@ -613,25 +624,11 @@ export default function MultiChartsPage() {
                 ))}
               </div>
             </div>
-            <div className="charts-toolbar-cluster charts-toolbar-cluster--stretch">
-              <span className="charts-toolbar-cluster-label">{t("charts.timeframe")}</span>
-              <div className="chart-toolbar tf-row-inline tf-row-inline--dense">
-                {TIMEFRAMES.map((tf) => (
-                  <button
-                    key={tf.api}
-                    type="button"
-                    className={`tf-btn ${chartInterval === tf.api ? "active" : ""}`}
-                    onClick={() => setChartInterval(tf.api)}
-                  >
-                    {tf.label}
-                  </button>
-                ))}
-              </div>
-            </div>
             <div className="filter-group">
               <label htmlFor="charts-sort-mode">{t("charts.sortFilter")}</label>
               <select
                 id="charts-sort-mode"
+                className="charts-content-select"
                 value={sortMode}
                 onChange={(e) => setSortMode(e.target.value)}
                 aria-label={t("charts.sortAria")}
@@ -647,6 +644,7 @@ export default function MultiChartsPage() {
               <label htmlFor="charts-min-vol-24h">{t("charts.minVol")}</label>
               <select
                 id="charts-min-vol-24h"
+                className="charts-content-select"
                 value={minVol24hUSDT}
                 onChange={(e) => setMinVol24hUSDT(Number(e.target.value))}
                 aria-label={t("charts.minVolAria")}
@@ -663,6 +661,7 @@ export default function MultiChartsPage() {
               <label htmlFor="charts-poll-sec">{t("charts.syncRest")}</label>
               <select
                 id="charts-poll-sec"
+                className="charts-content-select"
                 value={dataPollSec}
                 onChange={(e) => setDataPollSec(Number(e.target.value))}
                 aria-label={t("charts.syncRestAria")}
@@ -678,6 +677,7 @@ export default function MultiChartsPage() {
               <label htmlFor="charts-rotate-sec">{t("charts.rotateGrid")}</label>
               <select
                 id="charts-rotate-sec"
+                className="charts-content-select"
                 value={rotateSec}
                 onChange={(e) => setRotateSec(Number(e.target.value))}
                 aria-label={t("charts.rotateAria")}
