@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { fetchKlines } from "../api.js";
+import SignalEventChart from "../components/SignalEventChart.jsx";
 import { useI18n } from "../i18n/I18nContext.jsx";
 import { useTickers } from "../TickerContext.jsx";
 
@@ -349,40 +350,47 @@ export default function SignalsPage() {
             : t("signals.scanned", { done: progress.done, failed: progress.failed })}
         </div>
 
-        <div className="signals-table-wrap">
-          <table className="signals-table">
-            <thead>
-              <tr>
-                <th>{t("signals.symbol")}</th>
-                <th>{t("signals.currentPrice")}</th>
-                <th>{t("signals.previousHigh")}</th>
-                <th>{t("signals.previousRange")}</th>
-                <th>{t("signals.distance")}</th>
-                <th>{t("signals.dynamicThreshold")}</th>
-                <th>{t("signals.triggeredAt")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {signalEvents.length === 0 && (
-                <tr>
-                  <td className="signals-empty" colSpan={7}>
-                    {scanning ? t("signals.waiting") : t("signals.empty")}
-                  </td>
-                </tr>
-              )}
-              {signalEvents.map((signal) => (
-                <tr key={signal.id}>
-                  <td className="signals-symbol">{signal.symbol}</td>
-                  <td>{formatPrice(signal.triggerPrice)}</td>
-                  <td>{formatPrice(signal.previousHigh)}</td>
-                  <td>{signal.previousRangePct.toFixed(2)}%</td>
-                  <td className="signals-distance">{signal.distancePct.toFixed(2)}%</td>
-                  <td>{signal.triggerDistancePct.toFixed(2)}%</td>
-                  <td>{formatSignalTime(signal.triggeredAt)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="signals-list">
+          {signalEvents.length === 0 && (
+            <p className="signals-empty">
+              {scanning ? t("signals.waiting") : t("signals.empty")}
+            </p>
+          )}
+          {signalEvents.map((signal) => (
+            <article className="signal-event" key={signal.id}>
+              <div className="signal-event-data">
+                <div className="signal-event-title-row">
+                  <h4 className="signals-symbol">{signal.symbol}</h4>
+                  <time dateTime={signal.triggeredAt}>
+                    {formatSignalTime(signal.triggeredAt)}
+                  </time>
+                </div>
+                <dl className="signal-event-metrics">
+                  <div>
+                    <dt>{t("signals.currentPrice")}</dt>
+                    <dd>{formatPrice(signal.triggerPrice)}</dd>
+                  </div>
+                  <div>
+                    <dt>{t("signals.previousHigh")}</dt>
+                    <dd>{formatPrice(signal.previousHigh)}</dd>
+                  </div>
+                  <div>
+                    <dt>{t("signals.previousRange")}</dt>
+                    <dd>{signal.previousRangePct.toFixed(2)}%</dd>
+                  </div>
+                  <div>
+                    <dt>{t("signals.distance")}</dt>
+                    <dd className="signals-distance">{signal.distancePct.toFixed(2)}%</dd>
+                  </div>
+                  <div>
+                    <dt>{t("signals.dynamicThreshold")}</dt>
+                    <dd>{signal.triggerDistancePct.toFixed(2)}%</dd>
+                  </div>
+                </dl>
+              </div>
+              <SignalEventChart signal={signal} marketQuery={marketQuery} />
+            </article>
+          ))}
         </div>
       </section>
     </main>

@@ -114,6 +114,11 @@ export const TRANSLATIONS = {
       triggeredAt: "Ora del segnale",
       waiting: "I segnali appariranno progressivamente durante l'analisi.",
       empty: "Baseline pronta. In attesa di un nuovo ingresso nella soglia dinamica.",
+      chartAria: "Grafico del segnale {symbol}",
+      chartLoading: "Caricamento grafico...",
+      chartError: "Grafico non disponibile",
+      chartPreviousHigh: "Max prec.",
+      chartSignal: "Segnale",
     },
     charts: {
       grid: "Griglia",
@@ -529,6 +534,11 @@ export const TRANSLATIONS = {
       triggeredAt: "Signal time",
       waiting: "Signals will appear progressively during the scan.",
       empty: "Baseline ready. Waiting for a new entry into the dynamic threshold.",
+      chartAria: "{symbol} signal chart",
+      chartLoading: "Loading chart...",
+      chartError: "Chart unavailable",
+      chartPreviousHigh: "Prev. high",
+      chartSignal: "Signal",
     },
     charts: {
       grid: "Grid",
