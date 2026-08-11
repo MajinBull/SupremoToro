@@ -15,11 +15,15 @@ function previousUtcDayKey() {
 }
 
 function cacheKey(marketQuery) {
-  return `quota:previousHigh:v1:${marketQuery.exchange}:${marketQuery.market}:${previousUtcDayKey()}`;
+  return `quota:dailyLevels:v2:${marketQuery.exchange}:${marketQuery.market}:${previousUtcDayKey()}`;
 }
 
 function eventsCacheKey(marketQuery) {
-  return `quota:signalEvents:v1:${marketQuery.exchange}:${marketQuery.market}`;
+  return `quota:signalEvents:v2:${marketQuery.exchange}:${marketQuery.market}`;
+}
+
+function brokenCacheKey(marketQuery) {
+  return `quota:brokenPreviousHigh:v1:${marketQuery.exchange}:${marketQuery.market}:${previousUtcDayKey()}`;
 }
 
 function loadSignalEvents(key) {
@@ -42,11 +46,28 @@ function saveSignalEvents(key, events) {
 function loadCachedHighs(key) {
   try {
     const value = JSON.parse(localStorage.getItem(key) || "{}");
-    return new Map(
-      Object.entries(value).filter(([, high]) => Number.isFinite(high) && high > 0),
-    );
+    return new Map(Object.entries(value).filter(([, levels]) =>
+      Number.isFinite(levels?.previousHigh) && levels.previousHigh > 0
+    ));
   } catch {
     return new Map();
+  }
+}
+
+function loadBrokenSymbols(key) {
+  try {
+    const value = JSON.parse(localStorage.getItem(key) || "[]");
+    return new Set(Array.isArray(value) ? value : []);
+  } catch {
+    return new Set();
+  }
+}
+
+function saveBrokenSymbols(key, symbols) {
+  try {
+    localStorage.setItem(key, JSON.stringify([...symbols]));
+  } catch {
+    /* ignore storage errors */
   }
 }
 
@@ -58,7 +79,7 @@ function saveCachedHighs(key, highs) {
   }
 }
 
-function previousDayHigh(candles) {
+function dailyLevels(candles) {
   const now = new Date();
   const todayStartSec = Date.UTC(
     now.getUTCFullYear(),
@@ -69,7 +90,15 @@ function previousDayHigh(candles) {
     .filter((candle) => Number(candle.time) < todayStartSec)
     .sort((a, b) => Number(b.time) - Number(a.time))[0];
   const high = Number(previous?.high);
-  return Number.isFinite(high) && high > 0 ? high : null;
+  if (!Number.isFinite(high) || high <= 0) return null;
+  const today = (candles || []).find(
+    (candle) => Number(candle.time) >= todayStartSec,
+  );
+  const todayHigh = Number(today?.high);
+  return {
+    previousHigh: high,
+    todayHigh: Number.isFinite(todayHigh) ? todayHigh : 0,
+  };
 }
 
 function formatPrice(value) {
@@ -104,12 +133,14 @@ export default function SignalsPage() {
   const [scanning, setScanning] = useState(false);
   const [refreshVersion, setRefreshVersion] = useState(0);
   const [signalEvents, setSignalEvents] = useState([]);
+  const [brokenSymbols, setBrokenSymbols] = useState(() => new Set());
   const scanIdRef = useRef(0);
   const activeSignalsRef = useRef(new Set());
   const eventsInitializedRef = useRef(false);
 
   useEffect(() => {
     setSignalEvents(loadSignalEvents(eventsCacheKey(marketQuery)));
+    setBrokenSymbols(loadBrokenSymbols(brokenCacheKey(marketQuery)));
     activeSignalsRef.current = new Set();
     eventsInitializedRef.current = false;
   }, [marketKey, marketQuery]);
@@ -148,8 +179,8 @@ export default function SignalsPage() {
         const symbol = missing[index];
         try {
           const data = await fetchKlines(symbol, "D", { ...marketQuery, limit: 3 });
-          const high = previousDayHigh(data.candles);
-          if (high != null) working.set(symbol, high);
+          const levels = dailyLevels(data.candles);
+          if (levels != null) working.set(symbol, levels);
           else failed += 1;
         } catch {
           failed += 1;
@@ -175,17 +206,49 @@ export default function SignalsPage() {
     };
   }, [marketKey, marketQuery, symbolSignature, refreshVersion]);
 
+  useEffect(() => {
+    if (highsMarketKey !== marketKey || highs.size === 0) return;
+    setBrokenSymbols((current) => {
+      const next = new Set(current);
+      for (const row of availableRows) {
+        const levels = highs.get(row.symbol);
+        if (!levels) continue;
+        if (
+          levels.todayHigh >= levels.previousHigh ||
+          row.lastPrice >= levels.previousHigh
+        ) {
+          next.add(row.symbol);
+        }
+      }
+      if (next.size === current.size) return current;
+      saveBrokenSymbols(brokenCacheKey(marketQuery), next);
+      return next;
+    });
+  }, [availableRows, highs, highsMarketKey, marketKey, marketQuery]);
+
+  useEffect(() => {
+    if (brokenSymbols.size === 0) return;
+    setSignalEvents((existing) => {
+      const next = existing.filter((event) => !brokenSymbols.has(event.symbol));
+      if (next.length === existing.length) return existing;
+      saveSignalEvents(eventsCacheKey(marketQuery), next);
+      return next;
+    });
+  }, [brokenSymbols, marketQuery]);
+
   const matchingSignals = useMemo(() => {
     const matches = [];
     for (const row of availableRows) {
-      const previousHigh = highs.get(row.symbol);
+      const levels = highs.get(row.symbol);
+      const previousHigh = levels?.previousHigh;
       if (!Number.isFinite(previousHigh) || previousHigh <= 0) continue;
+      if (brokenSymbols.has(row.symbol)) continue;
       const distancePct = ((previousHigh - row.lastPrice) / previousHigh) * 100;
       if (distancePct < 0 || distancePct > THRESHOLD_PCT) continue;
       matches.push({ ...row, previousHigh, distancePct });
     }
     return matches.sort((a, b) => a.distancePct - b.distancePct);
-  }, [availableRows, highs]);
+  }, [availableRows, highs, brokenSymbols]);
 
   useEffect(() => {
     if (
