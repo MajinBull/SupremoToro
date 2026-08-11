@@ -19,7 +19,7 @@ function cacheKey(marketQuery) {
 }
 
 function eventsCacheKey(marketQuery) {
-  return `quota:signalEvents:v2:${marketQuery.exchange}:${marketQuery.market}`;
+  return `quota:signalEvents:v3:${marketQuery.exchange}:${marketQuery.market}`;
 }
 
 function brokenCacheKey(marketQuery) {
@@ -262,20 +262,6 @@ export default function SignalsPage() {
     if (!eventsInitializedRef.current) {
       eventsInitializedRef.current = true;
       activeSignalsRef.current = currentSymbols;
-      setSignalEvents((existing) => {
-        if (existing.length > 0) return existing;
-        const triggeredAt = new Date().toISOString();
-        const initial = matchingSignals.slice(0, MAX_SIGNAL_EVENTS).map((signal, index) => ({
-          id: `${triggeredAt}:${signal.symbol}:${index}`,
-          symbol: signal.symbol,
-          triggerPrice: signal.lastPrice,
-          previousHigh: signal.previousHigh,
-          distancePct: signal.distancePct,
-          triggeredAt,
-        }));
-        saveSignalEvents(eventsCacheKey(marketQuery), initial);
-        return initial;
-      });
       return;
     }
 

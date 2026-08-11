@@ -102,7 +102,7 @@ export const TRANSLATIONS = {
       refresh: "Aggiorna analisi",
       previousHighTitle: "Avvicinamento al massimo precedente",
       previousHighRule:
-        "Ultimi 50 ingressi entro il {pct}% sotto il massimo precedente, solo finché quel massimo non è mai stato superato oggi.",
+        "Registra solo i nuovi ingressi entro il {pct}% sotto il massimo precedente. Le condizioni già presenti alla prima scansione non generano segnali.",
       scanning: "Analisi {done} di {total} simboli...",
       scanned: "Analizzati {done} simboli · {failed} non disponibili",
       symbol: "Simbolo",
@@ -111,7 +111,7 @@ export const TRANSLATIONS = {
       distance: "Distanza",
       triggeredAt: "Ora del segnale",
       waiting: "I segnali appariranno progressivamente durante l'analisi.",
-      empty: "Nessun nuovo avvicinamento valido: i massimi già superati oggi sono esclusi.",
+      empty: "Baseline pronta. In attesa di un nuovo ingresso nella fascia del 5%.",
     },
     charts: {
       grid: "Griglia",
@@ -515,7 +515,7 @@ export const TRANSLATIONS = {
       refresh: "Refresh analysis",
       previousHighTitle: "Approaching the previous high",
       previousHighRule:
-        "The latest 50 entries within {pct}% below the previous high, only while that high has not been exceeded today.",
+        "Records only new entries within {pct}% below the previous high. Conditions already present during the initial scan do not create signals.",
       scanning: "Scanning {done} of {total} symbols...",
       scanned: "Scanned {done} symbols · {failed} unavailable",
       symbol: "Symbol",
@@ -524,7 +524,7 @@ export const TRANSLATIONS = {
       distance: "Distance",
       triggeredAt: "Signal time",
       waiting: "Signals will appear progressively during the scan.",
-      empty: "No valid new approaches; highs already exceeded today are excluded.",
+      empty: "Baseline ready. Waiting for a new entry into the 5% zone.",
     },
     charts: {
       grid: "Grid",
