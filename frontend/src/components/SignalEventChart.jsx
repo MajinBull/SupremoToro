@@ -71,6 +71,8 @@ export default function SignalEventChart({ signal, marketQuery, interval }) {
     let rightOffsetFrame = 0;
 
     const chart = createChart(element, {
+      // Vertical swipes scroll the page on touch devices; horizontal drag still pans.
+      handleScroll: { vertTouchDrag: false },
       layout: {
         background: { type: ColorType.Solid, color: "#12151c" },
         textColor: "#9ba6b7",

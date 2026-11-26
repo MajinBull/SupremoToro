@@ -850,7 +850,7 @@ export default function MultiChartsPage() {
         </div>
       )}
 
-      <main className="charts-grid-main">
+      <main className={`charts-grid-main${gridCount > 4 ? " charts-grid-main--dense" : ""}`}>
         {sortedSymbols.length === 0 && rows.length === 0 ? (
           <div className="empty-state">{t("charts.loadingTicker")}</div>
         ) : sortedSymbols.length === 0 ? (
@@ -867,7 +867,7 @@ export default function MultiChartsPage() {
           <div className="empty-state">{t("charts.loadingTicker")}</div>
         ) : (
           <div
-            className="charts-grid charts-grid--fixed"
+            className={`charts-grid charts-grid--fixed${gridCount > 4 ? " charts-grid--dense" : ""}`}
             style={{
               gridTemplateColumns: `repeat(${gridCols}, minmax(0, 1fr))`,
               gridTemplateRows: `repeat(${gridRows}, minmax(0, 1fr))`,

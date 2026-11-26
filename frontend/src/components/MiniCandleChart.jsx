@@ -100,6 +100,8 @@ export default function MiniCandleChart({
     const el = containerRef.current;
 
     const chart = createChart(el, {
+      // Vertical swipes scroll the page on touch devices; horizontal drag still pans.
+      handleScroll: { vertTouchDrag: false },
       layout: {
         background: { type: ColorType.Solid, color: "#12151c" },
         textColor: "#a8b0bd",

@@ -1781,6 +1781,8 @@ a {
 }
 
 .signals-count {
+  flex-shrink: 0;
+  white-space: nowrap;
   min-width: 2rem;
   padding: 0.3rem 0.5rem;
   border: 1px solid rgba(55, 139, 255, 0.5);
@@ -4018,23 +4020,38 @@ label.game-bet-funds-heading {
     display: none;
   }
 
+  /* Row 1: title · auth · menu. Chart controls drop to their own full-width rows so nothing overflows. */
   .header-actions-right {
+    display: contents;
+  }
+
+  .header-top-row .auth-bar {
     margin-left: auto;
-    flex: 1 1 auto;
-    min-width: 0;
   }
 
   .app-menu-toggle {
     display: inline-flex;
-    margin-left: auto;
     flex-shrink: 0;
   }
 
   .charts-header-actions {
-    margin-right: auto;
-    justify-content: flex-start;
+    order: 10;
+    flex: 1 1 100%;
+    justify-content: space-between;
     min-width: 0;
     flex-wrap: wrap;
+  }
+
+  .charts-header-timeframes {
+    order: 1;
+    flex: 1 1 100%;
+  }
+
+  .charts-header-timeframe {
+    flex: 1 1 0;
+    min-width: 0;
+    padding-left: 0.2rem;
+    padding-right: 0.2rem;
   }
 
   .dashboard-page .toolbar {
@@ -4058,5 +4075,19 @@ label.game-bet-funds-heading {
 
   .dashboard-page .toolbar .filter-group {
     order: 3;
+  }
+}
+
+/* Phone: 3×3 / 4×4 grids are unreadable when squeezed into one screen — use 2 columns and scroll. */
+@media (max-width: 600px) {
+  .charts-page-fill .charts-grid-main--dense {
+    overflow-y: auto;
+  }
+
+  .charts-page-fill .charts-grid--dense {
+    flex: none;
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    grid-template-rows: none !important;
+    grid-auto-rows: 14rem;
   }
 }
